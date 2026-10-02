@@ -100,12 +100,12 @@ t[#t+1] = UIElements.QuadButton(1) .. {
 		self:x(0)
 		self:zoomto(500,40)
 		self:halign(0)
-		self:visible(false)
+		-- Keep the hitbox active while hiding its visual appearance. An
+		-- invisible actor is ignored by BUTTON:GetTopButton().
+		self:visible(true):diffusealpha(0)
 	end,
-	TopPressedCommand = function(self, params)
-		if params.input ~= "DeviceButton_left mouse button" then
-			return
-		end
+	MouseClickCommand = function(self, params)
+		if params.event ~= "DeviceButton_left mouse button" then return end
 
 		local newIndex = tonumber(self:GetParent():GetName())
 		local wheel = top:GetMusicWheel()

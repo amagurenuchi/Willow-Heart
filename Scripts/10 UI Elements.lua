@@ -73,6 +73,19 @@ function UIElements.TextToolTip(z, depth, font)
 	return t
 end
 
+-- Til Death's copied tab modules use this small composite button.
+function UIElements.TextButton(z, depth, font)
+	local t = Def.ActorFrame{
+		ChildMouseDownCommand = function(self, params) self:playcommand("Click", {update="OnMouseDown", event=params and params.event}) end,
+		ChildMouseUpCommand = function(self, params) self:playcommand("Click", {update="OnMouseUp", event=params and params.event}) end,
+		ChildMouseClickCommand = function(self, params) self:playcommand("Click", {update="OnMouseClicked", event=params and params.event}) end,
+	}
+	t[#t+1] = Def.Quad{Name="BG",InitCommand=function(self) self:diffuse(COLOR.MainBackground):diffusealpha(0.2) end}
+	t[#t+1] = UIElements.QuadButton(z, depth)..{InitCommand=function(self) self:zoomto(220,30):diffusealpha(0) end}
+	t[#t+1] = LoadFont(font or "Common Normal")..{Name="Text",InitCommand=function(self) self:halign(0.5):valign(0.5) end}
+	return t
+end
+
 -- Basic clickable button implementation with quads
 function ButtonDemo(z)
 
@@ -262,4 +275,3 @@ end
 function UIElements.DoubleSlider()
 
 end
-

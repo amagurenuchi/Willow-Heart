@@ -20,7 +20,7 @@ if not UIElements.TextButton then
 					OnCommand = function(self)
 						local bg = self:GetParent():GetChild("BG")
 						if bg then
-							self:halign(0):valign(0)
+							self:halign(bg:GetHAlign()):valign(bg:GetVAlign())
 							self:zoomto(bg:GetZoomedWidth(), bg:GetZoomedHeight())
 						end
 					end,

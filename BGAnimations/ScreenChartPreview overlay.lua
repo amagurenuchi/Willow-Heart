@@ -64,6 +64,23 @@ local function seekToSecond(sec)
 	if GAMESTATE and GAMESTATE.SetCurMusicSeconds then pcall(function() GAMESTATE:SetCurMusicSeconds(sec) end) end
 end
 
+local function togglePreviewPause()
+	local top = SCREENMAN:GetTopScreen()
+	if top and top.PauseGame then
+		local paused = top.IsPaused and top:IsPaused() or false
+		pcall(function() top:PauseGame(not paused) end)
+		return
+	end
+
+	-- ScreenChartPreview is a ScreenWithMenuElements, so it does not expose
+	-- ScreenGameplay:PauseGame().  Keep the preview's pause state in GameState
+	-- when the screen-level gameplay helper is unavailable.
+	if GAMESTATE and GAMESTATE.GetPaused and GAMESTATE.SetPaused then
+		local paused = GAMESTATE:GetPaused()
+		pcall(function() GAMESTATE:SetPaused(not paused) end)
+	end
+end
+
 local function bar(vertices, x, y, width, height, c)
 	vertices[#vertices+1] = {{x, y-height, 0}, c}
 	vertices[#vertices+1] = {{x+width, y-height, 0}, c}
@@ -183,11 +200,7 @@ local t = Def.ActorFrame{
 				end
 			end
 			if event.type == "InputEventType_FirstPress" and deviceButton == "DeviceButton_right mouse button" then
-				-- ScreenGameplay owns both the preview audio and its NoteFieldPreview.
-				if top.PauseGame then
-					local paused = top.IsPaused and top:IsPaused() or false
-					pcall(function() top:PauseGame(not paused) end)
-				end
+				togglePreviewPause()
 				return true
 			end
 			if event.type == "InputEventType_FirstPress" and
@@ -668,7 +681,17 @@ local hoverActive = false
 local function updateGraphHover(button, params)
 	if not song or cdRows <= 0 then return end
 	local parent = button:GetParent()
-	local localY = INPUTFILTER:GetMouseY() - cdGraphY
+	local mouseX = INPUTFILTER:GetMouseX()
+	local mouseY = INPUTFILTER:GetMouseY()
+	local inside = mouseX >= rightX - rightW/2 and mouseX <= rightX + rightW/2 and
+		mouseY >= cdGraphY - cdGraphH/2 and mouseY <= cdGraphY + cdGraphH/2
+	if not inside then
+		hoverActive = false
+		parent:GetChild("HoverTooltip"):visible(false)
+		parent:GetChild("HoverLine"):visible(false)
+		return
+	end
+	local localY = mouseY - cdGraphY
 	localY = math.max(-cdGraphH/2, math.min(cdGraphH/2, localY))
 	local ratio = (localY + cdGraphH/2) / cdGraphH
 	local duration = song:GetLastSecond() or 1
@@ -805,6 +828,13 @@ local cdGraphCard = Def.ActorFrame{
 
 		MouseMoveCommand = function(self, params) updateGraphHover(self, params) end,
 		MouseDragCommand = function(self, params) updateGraphHover(self, params) end,
+		MouseDownCommand = function(self, params)
+			if params.event == "DeviceButton_left mouse button" and song then
+				local ratio = math.max(0, math.min(1,
+					(INPUTFILTER:GetMouseY() - (cdGraphY - cdGraphH/2)) / cdGraphH))
+				seekToSecond(ratio * (song:GetLastSecond() or 1))
+			end
+		end,
 
 		MouseClickCommand = function(self, params)
 			if not song then return end

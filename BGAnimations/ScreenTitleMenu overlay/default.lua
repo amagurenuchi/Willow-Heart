@@ -27,12 +27,43 @@ local function onlineText()
 	return "ONLINE", (server ~= "" and server or "Not Available")
 end
 
+local function saveOnlineLogin()
+	if not DLMAN or not DLMAN.IsLoggedIn or not DLMAN:IsLoggedIn() then return end
+	local username = DLMAN:GetUsername()
+	local token = DLMAN:GetToken()
+	if username and token and username ~= "" and token ~= "" then
+		ThemePrefs.Set("Willow_OnlineUsername", username)
+		ThemePrefs.Set("Willow_OnlinePasswordToken", token)
+		ThemePrefs.Save()
+	end
+end
+
+local function autoLogin()
+	if not DLMAN or not DLMAN.IsLoggedIn or DLMAN:IsLoggedIn() then return end
+	local username = ThemePrefs.Get("Willow_OnlineUsername")
+	local token = ThemePrefs.Get("Willow_OnlinePasswordToken")
+	if username and token and username ~= "" and token ~= "" and DLMAN.LoginWithToken then
+		DLMAN:LoginWithToken(username, token)
+	end
+end
+
+local function clearOnlineLogin()
+	ThemePrefs.Set("Willow_OnlineUsername", "")
+	ThemePrefs.Set("Willow_OnlinePasswordToken", "")
+	ThemePrefs.Save()
+end
+
 local charts, packs = countChartsAndPacks()
 local weekdays = {"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"}
 local themeVersion = "0.0.1"
 
 local t = Def.ActorFrame{}
 t[#t+1] = LoadActor(THEME:GetPathB("ScreenWithMenuElements", "overlay"))
+t[#t+1] = Def.Actor{
+	BeginCommand = function(self) autoLogin() end,
+	LoginMessageCommand = function(self) saveOnlineLogin() end,
+	LogOutMessageCommand = function(self) clearOnlineLogin() end,
+}
 
 -- Calendar and library summary, deliberately kept in the left half of the screen.
 t[#t+1] = Def.ActorFrame{
@@ -75,7 +106,7 @@ t[#t+1] = Def.ActorFrame{
 
 for i, day in ipairs(weekdays) do
 	local x = (i - 4) * 40
-	t[2][#t[2] + 1] = LoadFont("Common Normal") .. {
+	t[3][#t[3] + 1] = LoadFont("Common Normal") .. {
 		Text = day,
 		InitCommand = function(self) self:xy(145 + x, 78):zoom(0.42):diffuse(color("#222222")) end
 	}

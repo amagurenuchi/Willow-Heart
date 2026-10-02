@@ -255,17 +255,24 @@ BUTTON.AcceptedDeviceInput = {
 -- Function for handling input callbacks
 -- Call screen:AddInputCallback(BUTTON.InputCallback) on the OnCommand of the screen where you want mouse inputs.
 function BUTTON.InputCallback(event)
+	local deviceInput = event and event.DeviceInput
+	if not deviceInput then return false end
 
-	if BUTTON.AcceptedDeviceInput[event.DeviceInput.button] then
-		if event.type == "InputEventType_FirstPress" then
-			BUTTON:SetMouseDown(event.DeviceInput.button)
-		end
+	local button = deviceInput.button
+	if not BUTTON.AcceptedDeviceInput[button] then return false end
 
-		if event.type == "InputEventType_Release" then
-			BUTTON:SetMouseUp(event.DeviceInput.button)
-		end
+	-- A click can arrive before the first frame update on a newly opened screen.
+	-- Keep the coordinates valid for SetMouseDown/SetMouseUp in that case.
+	BUTTON.MouseX = INPUTFILTER:GetMouseX()
+	BUTTON.MouseY = INPUTFILTER:GetMouseY()
+
+	if event.type == "InputEventType_FirstPress" then
+		BUTTON:SetMouseDown(button)
+	elseif event.type == "InputEventType_Release" then
+		BUTTON:SetMouseUp(button)
 	end
 
+	return false
 end
 
 -- Resets the list of buttons currently added to the given screen. Call when the screen is being initialized.
@@ -273,7 +280,11 @@ function BUTTON.ResetButtonTable(self, screenName)
     if screenName ~= nil then
 		self.ButtonTable[screenName] = nil
 		self.CurTopButton = nil
+		self.CurTopButtonDepth = 0
 		self.CurDownButton = {}
+		self.CurDownButtonDepth = {}
+		self.MouseX = INPUTFILTER:GetMouseX()
+		self.MouseY = INPUTFILTER:GetMouseY()
     end
 end
 

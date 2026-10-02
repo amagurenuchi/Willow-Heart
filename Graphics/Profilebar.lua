@@ -16,21 +16,41 @@ local Values = {
 	RatingTextScale = 0.4
 }
 
+local function UpdateOnlineProfile()
+	if DLMAN and DLMAN.IsLoggedIn and DLMAN:IsLoggedIn() then
+		Values.ProfileName = DLMAN:GetUsername()
+		Values.Rating = DLMAN:GetSkillsetRating("Overall") or 0
+		Values.Rank = DLMAN:GetSkillsetRank("Overall") or 0
+	else
+		Values.ProfileName = Values.LocalProfileName or Values.ProfileName
+		Values.Rating = Values.LocalRating or Values.Rating
+		Values.Rank = Values.LocalRank or Values.Rank
+	end
+end
+
 local function SetValues(args)
 	for k,v in pairs(args) do
 		Values[k] = v
 	end
+	if Values.LocalProfileName == nil then Values.LocalProfileName = Values.ProfileName end
+	if Values.LocalRating == nil then Values.LocalRating = Values.Rating end
+	if Values.LocalRank == nil then Values.LocalRank = Values.Rank end
 end
 
 local t = Def.ActorFrame{
 	InitCommand = function(self)
 		SetValues(args)
+		UpdateOnlineProfile()
 		self:playcommand("Update",args)
 	end,
 	UpdateCommand = function(self, params)
-		SetValues(params)
+		SetValues(params or {})
+		UpdateOnlineProfile()
 		self:PlayCommandsOnChildren("Update")
-	end
+	end,
+	LoginMessageCommand = function(self) self:playcommand("Update") end,
+	LogOutMessageCommand = function(self) self:playcommand("Update") end,
+	OnlineUpdateMessageCommand = function(self) self:playcommand("Update") end
 }
 
 
@@ -49,6 +69,9 @@ t[#t+1] = UIElements.QuadButton(Values.ButtonZ)..{
 		self:zoomto(Values.FrameWidth,Values.FrameHeight)
 		self:diffuse(COLOR.MainBackground):diffusealpha(1)
 		self:z(Values.ButtonZ)
+	end,
+	MouseClickCommand = function(self)
+		if Values.OnProfileClick then Values.OnProfileClick() end
 	end
 }
 
@@ -63,6 +86,19 @@ t[#t+1] = Def.Sprite {
 	end
 }
 
+-- Keep the avatar hit area above the card hit area so it can open asset settings.
+t[#t+1] = UIElements.QuadButton(Values.ButtonZ + 1)..{
+	UpdateCommand = function(self)
+		self:x(-Values.FrameWidth/2 + Values.FrameHeight/2):y(0)
+		self:zoomto(Values.FrameHeight, Values.FrameHeight)
+		self:diffusealpha(0)
+		self:z(Values.ButtonZ + 1)
+	end,
+	MouseClickCommand = function(self)
+		if Values.OnAvatarClick then Values.OnAvatarClick() end
+	end
+}
+
 -- Rating text
 t[#t+1] = LoadFont("Common Normal")..{
 	UpdateCommand = function(self)
@@ -70,7 +106,11 @@ t[#t+1] = LoadFont("Common Normal")..{
 		self:halign(0)
 		self:zoom(Values.RatingTextScale)
 		self:diffuse(GetRatingColor(Values.Rating))
-		self:settextf("%0.2f | #%d",Values.Rating, Values.Rank)
+		if DLMAN and DLMAN.IsLoggedIn and DLMAN:IsLoggedIn() then
+			self:settextf("%0.2f | #%d", Values.Rating, Values.Rank)
+		else
+			self:settextf("%0.2f", Values.Rating)
+		end
 	end
 }
 

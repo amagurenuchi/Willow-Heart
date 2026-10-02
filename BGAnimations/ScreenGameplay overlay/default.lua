@@ -1,146 +1,260 @@
--- Gameplay HUD
--- The gameplay screen is intentionally quiet, so keep the live information
--- compact and readable over the playfield.
-
-local pss
 local player = PLAYER_1
-
-local judges = {
-	{ key = "TapNoteScore_W1", name = "MARV", color = color("1,1,1,1") },
-	{ key = "TapNoteScore_W2", name = "PERF", color = color("1,0.82,0.15,1") },
-	{ key = "TapNoteScore_W3", name = "GREAT", color = color("0.3,1,0.45,1") },
-	{ key = "TapNoteScore_W4", name = "GOOD", color = color("0.35,0.7,1,1") },
-	{ key = "TapNoteScore_W5", name = "BAD", color = color("1,0.35,0.4,1") },
-	{ key = "TapNoteScore_Miss", name = "MISS", color = color("0.65,0.65,0.65,1") },
-}
+local lastTapNoteScore = "TapNoteScore_W2"
+local displayMode = judgementDisplayMode and judgementDisplayMode() or "Minimal"
 
 local function stats()
 	local stage = STATSMAN:GetCurStageStats()
-	pss = stage and stage:GetPlayerStageStats(player) or nil
-	return pss
+	return stage and stage:GetPlayerStageStats(player) or nil
 end
 
-local function wifePercent()
+local function scoreName(score)
+	return tostring(score or "")
+end
+
+local function judgmentText(score)
+	return ({
+		TapNoteScore_W3 = "GREAT",
+		TapNoteScore_W4 = "GOOD",
+		TapNoteScore_W5 = "BAD",
+		TapNoteScore_Miss = "MISS",
+	})[scoreName(score)] or ""
+end
+
+local function currentCombo()
 	local s = stats()
-	if not s then return 0 end
-
-	if s.GetCurWifeScore and s.GetMaxWifeScore then
-		local current = s:GetCurWifeScore()
-		local maximum = s:GetMaxWifeScore()
-		if maximum and maximum > 0 then return current / maximum * 100 end
-	end
-
-	if s.GetWifeScore then return s:GetWifeScore() * 100 end
-	return 0
+	return s and s.GetCurrentCombo and (tonumber(s:GetCurrentCombo()) or 0) or 0
 end
 
-local function wifeColor(percent)
-	if percent >= 99.9935 then return color("1,1,1,1") end
-	if percent >= 99.955 then return color("0,0.9,1,1") end
-	if percent >= 99.7 then return color("1,0.82,0.15,1") end
-	if percent >= 93 then return color("0.35,1,0.45,1") end
-	if percent >= 80 then return color("1,0.55,0.7,1") end
-	if percent >= 70 then return color("0.4,0.7,1,1") end
-	if percent >= 60 then return color("0.75,0.4,1,1") end
-	return color("0.7,0.7,0.7,1")
+local function hideFallbackJudgment()
+	local screen = SCREENMAN:GetTopScreen()
+	local playerActor = screen and screen:GetChild("PlayerP1")
+	local fallback = playerActor and playerActor:GetChild("Judgment")
+	if fallback then fallback:visible(false) end
 end
 
-local function updateCounters(frame)
-	local s = stats()
-	for i, judgment in ipairs(judges) do
-		local count = 0
-		if s and s.GetTapNoteScores then
-			count = s:GetTapNoteScores(judgment.key) or 0
+local function hideFallbackLifeBar()
+	local screen = SCREENMAN:GetTopScreen()
+	local meter = screen and screen.GetLifeMeter and screen:GetLifeMeter(player)
+	if meter then meter:visible(false):diffusealpha(0) end
+end
+
+local function comboValue(params)
+	if params then
+		if params.PlayerStageStats and params.PlayerStageStats.GetCurrentCombo then
+			return tonumber(params.PlayerStageStats:GetCurrentCombo()) or 0
 		end
-		local row = frame:GetChild("Judge" .. i)
-		if row then row:GetChild("Count"):settext(tostring(count)) end
+		if params.Combo ~= nil then return tonumber(params.Combo) or 0 end
+		if params.OldCombo ~= nil then return tonumber(params.OldCombo) or 0 end
+	end
+	return currentCombo()
+end
+
+local function updateCombo(self, params)
+	local value = comboValue(params)
+	self:stoptweening()
+	if value <= 0 then
+		self:settext(""):diffusealpha(0)
+		return
+	end
+	self:settext(tostring(value))
+	self:diffuse(lastTapNoteScore == "TapNoteScore_W1" and color("#777777") or color("#FFFFFF"))
+	self:diffusealpha(1):linear(0.8):diffusealpha(0.35)
+end
+
+local combo = LoadFont("multicolore  64px") .. {
+	Name = "CustomCombo",
+	InitCommand = function(self)
+		self:xy(SCREEN_CENTER_X - 10, SCREEN_CENTER_Y - 150)
+			:halign(0.5):valign(0.5):visible(displayMode == "Minimal"):diffusealpha(0)
+	end,
+	JudgmentMessageCommand = function(self, params)
+		if not params or params.Player ~= player then return end
+		hideFallbackJudgment()
+		updateCombo(self, params)
+	end,
+	ComboChangedMessageCommand = function(self, params)
+		if not params or params.Player ~= player then return end
+		updateCombo(self, params)
+	end,
+}
+
+local judgment = LoadFont("DFPGothic 64px") .. {
+	Name = "CustomJudgment",
+	InitCommand = function(self)
+		self:xy(SCREEN_CENTER_X, SCREEN_CENTER_Y - 205)
+			:halign(0.5):valign(0.5):zoom(0.5):visible(displayMode == "Minimal"):diffusealpha(0)
+	end,
+	JudgmentMessageCommand = function(self, params)
+		if not params or params.Player ~= player then return end
+		hideFallbackJudgment()
+		lastTapNoteScore = scoreName(params.TapNoteScore)
+		local text = judgmentText(params.TapNoteScore)
+		self:stoptweening():settext(text)
+		if text == "" then
+			self:diffusealpha(0)
+		else
+			self:diffusealpha(1):sleep(0.45):linear(0.35):diffusealpha(0)
+		end
+	end,
+}
+
+local classicJudgmentFrames = {
+	TapNoteScore_W1 = 0,
+	TapNoteScore_W2 = 1,
+	TapNoteScore_W3 = 2,
+	TapNoteScore_W4 = 3,
+	TapNoteScore_W5 = 4,
+	TapNoteScore_Miss = 5,
+}
+
+local classicJudgment = Def.Sprite{
+	Name = "ClassicJudgment",
+	Texture = "../../../../" .. getAssetPath("judgment"),
+	InitCommand = function(self)
+		self:xy(SCREEN_CENTER_X, SCREEN_CENTER_Y + 40)
+			:pause():visible(displayMode == "Classic"):diffusealpha(0)
+	end,
+	JudgmentMessageCommand = function(self, params)
+		if displayMode ~= "Classic" or not params or params.Player ~= player or params.HoldNoteScore then return end
+		local frame = classicJudgmentFrames[scoreName(params.TapNoteScore)]
+		if frame == nil then return end
+		if self:GetNumStates() == 12 then
+			-- The asset is a 2-column by 6-row sheet:
+			-- first column = early, second column = late.
+			local earlyColumn = params.Early == true and 0 or 1
+			frame = frame * 2 + earlyColumn
+		end
+		self:stoptweening():stopeffect():setstate(frame):visible(true):diffusealpha(1)
+		self:sleep(0.8):linear(0.1):diffusealpha(0)
+	end,
+}
+
+local classicCombo = Def.ActorFrame{
+	Name = "ClassicCombo",
+	InitCommand = function(self)
+		self:xy(SCREEN_CENTER_X + 30, SCREEN_CENTER_Y - 20):visible(displayMode == "Classic")
+	end,
+	JudgmentMessageCommand = function(self, params)
+		if displayMode ~= "Classic" or not params or params.Player ~= player then return end
+		self:playcommand("UpdateCombo", params)
+	end,
+	ComboChangedMessageCommand = function(self, params)
+		if displayMode ~= "Classic" or not params or params.Player ~= player then return end
+		self:playcommand("UpdateCombo", params)
+	end,
+	ComboCommand = function(self, params)
+		if displayMode ~= "Classic" then return end
+		self:playcommand("UpdateCombo", params)
+	end,
+	UpdateComboCommand = function(self, params)
+		local value = comboValue(params)
+		local number = self:GetChild("Number")
+		local label = self:GetChild("Label")
+		if value <= 0 then
+			number:settext(""):diffusealpha(0)
+			label:visible(false)
+			return
+		end
+		number:settext(tostring(value)):diffusealpha(1)
+		label:visible(true)
+		if params and params.FullComboW1 then
+			number:diffuse(color("#FFFFFF"))
+		elseif params and params.FullComboW2 then
+			number:diffuse(color("#FFCC33"))
+		elseif params and params.FullComboW3 then
+			number:diffuse(color("#66FF88"))
+		else
+			number:diffuse(color("#FFFFFF"))
+		end
+		number:stoptweening():sleep(0.5):linear(0.35):diffusealpha(0.45)
+	end,
+	LoadFont("Common Large") .. {
+		Name = "Number",
+		InitCommand = function(self)
+			self:x(-4):halign(1):valign(1):zoom(0.5):diffuse(color("#FFFFFF")):diffusealpha(0)
+		end,
+	},
+	LoadFont("Common Normal") .. {
+		Name = "Label",
+		InitCommand = function(self)
+			self:x(2):halign(0):valign(1):zoom(0.6):diffuse(color("#FFFFFF"))
+				:settext("COMBO")
+		end,
+	},
+}
+
+local function updateAverage(self)
+	local s = stats()
+	if not s then self:settext("0.00%") return end
+	if s.GetCurWifeScore and s.GetMaxWifeScore then
+		local max = tonumber(s:GetMaxWifeScore()) or 0
+		if max > 0 then self:settextf("%.2f%%", (s:GetCurWifeScore() / max) * 100) else self:settext("0.00%") end
+	else
+		self:settext("0.00%")
 	end
 end
 
-local t = Def.ActorFrame{
-	-- Keep the existing stage-information handoff intact.
+local function updateAccumulated(self)
+	local s = stats()
+	if not s or not s.GetWifeScore then self:settext("0.00%") return end
+	self:settextf("%.2f%%", s:GetWifeScore() * 100)
+end
+
+local wife = Def.ActorFrame{
+	Name = "WifePercent",
+	InitCommand = function(self)
+		self:GetChild("Average"):playcommand("Update")
+		self:GetChild("Accumulated"):playcommand("Update")
+	end,
+	JudgmentMessageCommand = function(self, params)
+		if not params or params.Player ~= player then return end
+		self:GetChild("Average"):playcommand("Update")
+		self:GetChild("Accumulated"):playcommand("Update")
+	end,
+	LoadFont("hatsukoifriendsmini 24px") .. {
+		Name = "Average",
+		InitCommand = function(self)
+			self:xy(24, SCREEN_HEIGHT - 66):halign(0):valign(1):diffuse(color("#FFFFFF")):settext("0.00%")
+		end,
+		UpdateCommand = function(self)
+			updateAverage(self)
+		end,
+	},
+	LoadFont("hatsukoifriendsmini 24px") .. {
+		Name = "Accumulated",
+		InitCommand = function(self)
+			self:xy(24, SCREEN_HEIGHT - 24):halign(0):valign(1):zoom(1.5):diffuse(color("#FFFFFF")):settext("0.00%")
+		end,
+		UpdateCommand = function(self)
+			updateAccumulated(self)
+		end,
+	},
+}
+
+return Def.ActorFrame{
+	-- Keep the stage-information handoff, but consume it when gameplay was
+	-- entered from Stage Information so this cannot redirect in a loop.
 	OnCommand = function(self)
+		hideFallbackJudgment()
+		hideFallbackLifeBar()
 		if _G.willowHeartStageInformationShown then
 			_G.willowHeartStageInformationShown = false
 			return
 		end
-
 		local screen = SCREENMAN:GetTopScreen()
 		if screen then
 			screen:SetNextScreenName("ScreenStageInformation")
 			screen:StartTransitioningScreen("SM_GoToNextScreen")
 		end
 	end,
+	combo,
+	judgment,
+	classicJudgment,
+	classicCombo,
+	wife,
+	LoadActor("judgecounter.lua"),
+	LoadActor("errorbar.lua"),
+	LoadActor("custom_lifebar.lua"),
+	LoadActor("songinfo.lua"),
+	LoadActor("progresscircle.lua"),
 }
-
--- Wife% and current combo sit above the receptors, out of the way of notes.
-t[#t + 1] = Def.ActorFrame{
-	InitCommand = function(self) self:xy(SCREEN_CENTER_X, 34):queuecommand("Update") end,
-	UpdateCommand = function(self) self:GetChild("Wife"):playcommand("Update"); self:GetChild("Combo"):playcommand("Update"); self:sleep(0.05):queuecommand("Update") end,
-	Def.Quad{ InitCommand = function(self) self:zoomto(150, 52):diffuse(color("0,0,0,0.58")) end },
-	LoadFont("Common Normal") .. {
-		Name = "Wife",
-		InitCommand = function(self) self:y(-5):zoom(0.95):shadowlength(1):settext("0.00%") end,
-		UpdateCommand = function(self)
-			local percent = wifePercent()
-			self:settextf("%.2f%%", percent):diffuse(wifeColor(percent))
-		end,
-	},
-	LoadFont("Common Normal") .. {
-		Name = "Combo",
-		InitCommand = function(self) self:y(17):zoom(0.3):diffuse(color("0.75,0.75,0.75,1")):settext("COMBO 0") end,
-		UpdateCommand = function(self)
-			local s = stats()
-			local combo = s and s:GetCurrentCombo() or 0
-			self:settextf("COMBO %d", combo)
-		end,
-	},
-}
-
--- Compact W1-Miss counter in the upper-right corner.
-local counter = Def.ActorFrame{
-	Name = "JudgementCounter",
-	InitCommand = function(self) self:xy(SCREEN_WIDTH - 88, 58):queuecommand("Update") end,
-	UpdateCommand = function(self) updateCounters(self); self:sleep(0.05):queuecommand("Update") end,
-}
-
-for i, judgment in ipairs(judges) do
-	counter[#counter + 1] = Def.ActorFrame{
-		Name = "Judge" .. i,
-		InitCommand = function(self) self:y((i - 1) * 15) end,
-		LoadFont("Common Normal") .. { InitCommand = function(self) self:x(-40):halign(0):zoom(0.28):diffuse(judgment.color):settext(judgment.name) end },
-		LoadFont("Common Normal") .. { Name = "Count", InitCommand = function(self) self:x(40):halign(1):zoom(0.3):settext("0") end },
-	}
-end
-t[#t + 1] = counter
-
--- Timing error bar: center is on-time, left is early, right is late.
-local errorBar = Def.ActorFrame{
-	Name = "ErrorBar",
-	InitCommand = function(self) self:xy(SCREEN_CENTER_X, SCREEN_HEIGHT - 62) end,
-	JudgmentMessageCommand = function(self, params)
-		local offset = params.TapNoteOffset
-		if not offset or params.TapNoteScore == "TapNoteScore_Miss" then return end
-		local x = math.max(-116, math.min(116, offset * 1000 / 45 * 116))
-		for i = 24, 2, -1 do
-			local previous = self:GetChild("Marker" .. (i - 1))
-			local current = self:GetChild("Marker" .. i)
-			if previous and current then current:x(previous:GetX()):diffuse(previous:GetDiffuse()) end
-		end
-		local marker = self:GetChild("Marker1")
-		if marker then marker:x(x):diffuse(offset < 0 and color("1,0.45,0.45,0.9") or color("0.45,0.7,1,0.9")) end
-	end,
-	Def.Quad{ InitCommand = function(self) self:zoomto(240, 3):diffuse(color("0,0,0,0.7")) end },
-	Def.Quad{ InitCommand = function(self) self:zoomto(2, 13):diffuse(color("1,1,1,0.9")) end },
-	LoadFont("Common Normal") .. { InitCommand = function(self) self:y(11):zoom(0.24):diffuse(color("0.7,0.7,0.7,1")):settext("EARLY                 ON TIME                 LATE") end },
-}
-
-for i = 1, 24 do
-	errorBar[#errorBar + 1] = Def.Quad{
-		Name = "Marker" .. i,
-		InitCommand = function(self) self:zoomto(3, 8):diffuse(color("1,1,1,0")) end,
-	}
-end
-t[#t + 1] = errorBar
-
-return t

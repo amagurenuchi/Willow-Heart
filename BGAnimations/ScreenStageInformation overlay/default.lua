@@ -16,6 +16,11 @@ local function StepsMSD()
 	return msd and string.format("%.2f", msd) or ""
 end
 
+local function CurrentRate()
+	local options = GAMESTATE:GetSongOptionsObject('ModsLevel_Current')
+	return options and options.MusicRate and options:MusicRate() or 1
+end
+
 local title = song and song:GetDisplayMainTitle() or "READY"
 local subtitle = song and song:GetDisplaySubTitle() or ""
 local artist = song and song:GetDisplayArtist() or ""
@@ -89,6 +94,12 @@ t[#t+1] = Def.ActorFrame{
 		InitCommand = function(self)
 			self:xy(420, 14):halign(1):zoom(0.48):diffuse(COLOR.MainHighlight)
 			self:settext(DifficultyName())
+		end,
+	},
+	LoadFont("DFPGothic 64px")..{
+		InitCommand = function(self)
+			self:xy(416, 42):halign(1):zoom(0.34):diffuse(COLOR.TextSub1)
+			self:settextf("%.2fx", CurrentRate())
 		end,
 	},
 	LoadFont("DFPGothic 64px")..{

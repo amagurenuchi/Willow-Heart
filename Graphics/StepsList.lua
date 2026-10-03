@@ -1,23 +1,6 @@
 local Values = { Song = nil, Steps = nil, Rate = 1 }
 local rowY = -70
 
-local function DifficultyColor(diff)
-	local colors = {
-		Beginner = "#66CCFF", Easy = "#66DD88", Medium = "#FFDD66",
-		Hard = "#FF9966", Challenge = "#FF6699", Edit = "#CC99FF"
-	}
-	return color(colors[ToEnumShortString(diff)] or "#AAB3C4")
-end
-
-local function DifficultyName(diff)
-	local names = {
-		Beginner = "BEGINNER", Easy = "EASY", Medium = "NORMAL",
-		Hard = "HARD", Challenge = "INSANE", Edit = "EDIT"
-	}
-	local key = diff and ToEnumShortString(diff) or ""
-	return names[key] or string.upper(key)
-end
-
 local function StepsForSong(song)
 	if not song then return {} end
 	if song.GetChartsMatchingFilter then return song:GetChartsMatchingFilter() or {} end
@@ -57,7 +40,7 @@ for i = 1, 7 do
 		end,
 		UpdateCommand = function(self)
 			local chart = StepsForSong(Values.Song)[i]
-			self:diffuse(chart and DifficultyColor(chart:GetDifficulty()) or COLOR.MainBorder)
+			self:diffuse(chart and GetDifficultyColor(chart:GetDifficulty()) or COLOR.MainBorder)
 			self:diffusealpha(chart and (chart == Values.Steps and 0.34 or 0.12) or 0)
 		end,
 		SongUpdateCommand = function(self) self:playcommand("Update") end,
@@ -71,7 +54,7 @@ for i = 1, 7 do
 		UpdateCommand = function(self)
 			local chart = StepsForSong(Values.Song)[i]
 			if chart then
-				self:settext(DifficultyName(chart:GetDifficulty())):diffuse(chart == Values.Steps and COLOR.MainHighlight or COLOR.TextMain)
+				self:settext(GetDifficultyLabel(chart:GetDifficulty())):diffuse(chart == Values.Steps and COLOR.MainHighlight or COLOR.TextMain)
 			else
 				self:settext("")
 			end
@@ -86,7 +69,7 @@ for i = 1, 7 do
 		UpdateCommand = function(self)
 			local chart = StepsForSong(Values.Song)[i]
 			self:settext(chart and string.format("MSD  %.2f", OverallMSD(chart)) or "")
-			self:diffuse(chart and DifficultyColor(chart:GetDifficulty()) or COLOR.TextSub1)
+			self:diffuse(chart and GetDifficultyColor(chart:GetDifficulty()) or COLOR.TextSub1)
 		end,
 		SongUpdateCommand = function(self) self:playcommand("Update") end,
 		StepsUpdateCommand = function(self) self:playcommand("Update") end,

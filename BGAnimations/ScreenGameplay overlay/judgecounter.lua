@@ -18,15 +18,6 @@ local labels = {
 	TapNoteScore_Miss = "MISS",
 }
 
-local colors = {
-	TapNoteScore_W1 = color("#77CCFF"),
-	TapNoteScore_W2 = color("#FFDD44"),
-	TapNoteScore_W3 = color("#55EE77"),
-	TapNoteScore_W4 = color("#AA66FF"),
-	TapNoteScore_W5 = color("#FF8833"),
-	TapNoteScore_Miss = color("#FF4444"),
-}
-
 local counts = {}
 for _, judgment in ipairs(judgmentOrder) do counts[judgment] = 0 end
 
@@ -73,7 +64,7 @@ for i, judgment in ipairs(judgmentOrder) do
 	t[#t + 1] = LoadFont("Common Normal") .. {
 		Name = judgment .. "Label",
 		InitCommand = function(self)
-			self:xy(-52, y):halign(0):zoom(0.30):diffuse(colors[judgment]):settext(labels[judgment])
+			self:xy(-52, y):halign(0):zoom(0.30):diffuse(GetJudgementColor(judgment)):settext(labels[judgment])
 		end,
 	}
 	t[#t + 1] = LoadFont("Common Normal") .. {

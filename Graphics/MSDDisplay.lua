@@ -20,18 +20,6 @@ local skillsets = {
 	{ name = "Technical", index = 8 },
 }
 
-local function GetDifficultyName(diff)
-	if not diff then return "NORMAL" end
-	local str = ToEnumShortString(diff)
-	if str == "Beginner" then return "BEGINNER"
-	elseif str == "Easy" then return "EASY"
-	elseif str == "Medium" then return "NORMAL"
-	elseif str == "Hard" then return "HARD"
-	elseif str == "Challenge" then return "INSANE"
-	elseif str == "Edit" then return "EDIT"
-	else return string.upper(str) end
-end
-
 local function GetMSD(steps, rate, index)
 	if not steps or not steps.GetMSD then return 0 end
 	rate = rate or 1

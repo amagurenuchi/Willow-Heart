@@ -49,7 +49,22 @@ local function comboValue(params)
 	return currentCombo()
 end
 
+local comboTapScores = {
+	TapNoteScore_W1 = true,
+	TapNoteScore_W2 = true,
+	TapNoteScore_W3 = true,
+	TapNoteScore_W4 = true,
+	TapNoteScore_W5 = true,
+	TapNoteScore_Miss = true,
+}
+
 local function updateCombo(self, params)
+	local tapScore = params and scoreName(params.TapNoteScore)
+	if not tapScore or not comboTapScores[tapScore] or (params and params.HoldNoteScore) then return end
+	if tapScore == "TapNoteScore_W4" or tapScore == "TapNoteScore_W5" or tapScore == "TapNoteScore_Miss" then
+		self:stoptweening():settext(""):diffusealpha(0)
+		return
+	end
 	local value = comboValue(params)
 	self:stoptweening()
 	if value <= 0 then
@@ -72,10 +87,6 @@ local combo = LoadFont("multicolore  64px") .. {
 		hideFallbackJudgment()
 		updateCombo(self, params)
 	end,
-	ComboChangedMessageCommand = function(self, params)
-		if not params or params.Player ~= player then return end
-		updateCombo(self, params)
-	end,
 }
 
 local judgment = LoadFont("DFPGothic 64px") .. {
@@ -89,7 +100,7 @@ local judgment = LoadFont("DFPGothic 64px") .. {
 		hideFallbackJudgment()
 		lastTapNoteScore = scoreName(params.TapNoteScore)
 		local text = judgmentText(params.TapNoteScore)
-		self:stoptweening():settext(text)
+		self:stoptweening():settext(text):diffuse(GetJudgementColor(lastTapNoteScore))
 		if text == "" then
 			self:diffusealpha(0)
 		else

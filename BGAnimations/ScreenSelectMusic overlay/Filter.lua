@@ -1,6 +1,7 @@
 local numbershers = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "0"}
-local frameX = SCREEN_WIDTH - capWideScale(360, 400) - 10
-local frameY = 45
+local frameWidth = capWideScale(360, 400)
+local frameX = SCREEN_WIDTH - frameWidth - 10
+local frameY = 95
 local active = false
 local whee
 local spacingY = 20
@@ -9,10 +10,9 @@ local ActiveSS = 0
 local SSQuery = {}
 SSQuery[0] = {}
 SSQuery[1] = {}
-local frameWidth = capWideScale(360, 400)
-local frameHeight = 350
+local frameHeight = SCREEN_HEIGHT - 135
 local offsetX = 10
-local offsetY = 20
+local offsetY = 24
 local activebound = 0
 for i = 1, #ms.SkillSets + 2 do
 	SSQuery[0][i] = "0"
@@ -109,14 +109,14 @@ local f = Def.ActorFrame {
 		self:queuecommand("Set")
 	end,
 	OffCommand = function(self)
-		self:bouncebegin(0.2):xy(-500, frameY):diffusealpha(0)
+		self:decelerate(0.6):xy(SCREEN_WIDTH + 500, frameY):diffusealpha(0)
 		self:sleep(0.04):queuecommand("Invis")
 	end,
 	InvisCommand= function(self)
 		self:visible(false)
 	end,
 	OnCommand = function(self)
-		self:bouncebegin(0.2):xy(frameX, frameY):diffusealpha(1)
+		self:xy(SCREEN_WIDTH + 500, frameY):decelerate(0.6):xy(frameX, frameY):diffusealpha(1)
 	end,
 	SetCommand = function(self)
 		self:finishtweening()
@@ -139,64 +139,59 @@ local f = Def.ActorFrame {
 		MESSAGEMAN:Broadcast("UpdateFilter")
 		SCREENMAN:set_input_redirected(PLAYER_1, false)
 	end,
+	-- Salmon offset backdrop
 	Def.Quad {
 		InitCommand = function(self)
-			self:zoomto(frameWidth, frameHeight):halign(0):valign(0):diffuse(getMainColor("tabs"))
+			self:xy(5, 5):zoomto(frameWidth, frameHeight):halign(0):valign(0):diffuse(COLOR.MainHighlight)
 		end
 	},
+	-- Main white backdrop card
 	Def.Quad {
 		InitCommand = function(self)
-			self:zoomto(frameWidth, offsetY):halign(0):valign(0):diffuse(getMainColor("frames")):diffusealpha(0.5)
+			self:zoomto(frameWidth, frameHeight):halign(0):valign(0):diffuse(COLOR.MainBackground)
+		end
+	},
+	-- Border outline
+	UIElements.Border(frameWidth, frameHeight, 1) .. {
+		InitCommand = function(self)
+			self:xy(frameWidth / 2, frameHeight / 2):diffuse(COLOR.MainBorder)
+		end
+	},
+	-- Header bar
+	Def.Quad {
+		InitCommand = function(self)
+			self:zoomto(frameWidth, offsetY):halign(0):valign(0):diffuse(COLOR.MainHighlight)
 		end
 	},
 	LoadFont("Common Normal") .. {
 		InitCommand = function(self)
-			self:xy(5, offsetY - 9):zoom(0.6):halign(0):settext(translated_info["Title"])
-			self:diffuse(Saturation(getMainColor("positive"), 0.1))
+			self:xy(10, offsetY / 2):zoom(0.55):halign(0):valign(0.5):settext(translated_info["Title"])
+			self:diffuse(COLOR.TextMain)
 		end
 	},
-	LoadFont("Common Large") .. {
+	LoadFont("Common Normal") .. {
 		InitCommand = function(self)
-			self:xy(frameX, frameY -17):zoom(0.3):halign(0)
+			self:xy(10, 28):zoom(0.3):halign(0):diffuse(COLOR.TextSub1)
 			self:settext(translated_info["ExplainStartInput"])
 		end
 	},
-	LoadFont("Common Large") .. {
+	LoadFont("Common Normal") .. {
 		InitCommand = function(self)
-			self:xy(frameX, frameY + 20 -17):zoom(0.3):halign(0)
+			self:xy(10, 40):zoom(0.3):halign(0):diffuse(COLOR.TextSub1)
 			self:settext(translated_info["ExplainCancelInput"])
 		end
 	},
-	LoadFont("Common Large") .. {
+	LoadFont("Common Normal") .. {
 		InitCommand = function(self)
-			self:xy(frameX, frameY + 40 -17):zoom(0.3):halign(0)
+			self:xy(10, 52):zoom(0.3):halign(0):diffuse(COLOR.TextSub1)
 			self:settext(translated_info["ExplainGrey"])
 		end
 	},
-	LoadFont("Common Large") .. {
+	-- Right column filter options
+	UIElements.TextToolTip(1, 1, "Common Normal") ..{
 		InitCommand = function(self)
-			self:xy(frameX, frameY + 60 -17):zoom(0.3):halign(0)
-			self:settext(translated_info["ExplainBounds"])
-		end
-	},
-	--[[ -- hiding extra unnecessary information
-	LoadFont("Common Large") .. {
-		InitCommand = function(self)
-			self:xy(frameX, frameY + 80 -17):zoom(0.3):halign(0)
-			self:settext(translated_info["ExplainHighest"])
-		end
-	},
-	LoadFont("Common Large") .. {
-		InitCommand = function(self)
-			self:xy(frameX, frameY + 100 -17):zoom(0.3):halign(0)
-			self:settext(translated_info["ExplainHighestDifficulty"])
-		end
-	},
-	]]
-	UIElements.TextToolTip(1, 1, "Common Large") ..{
-		InitCommand = function(self)
-			self:xy(frameX + frameWidth / 2, 175):zoom(textzoom):halign(0)
-			self:diffuse(getMainColor("positive"))
+			self:xy(frameWidth / 2 + 10, 70):zoom(textzoom):halign(0)
+			self:diffuse(COLOR.TextMain)
 		end,
 		SetCommand = function(self)
 			self:settextf("%s:%5.1fx", translated_info["MaxRate"], FILTERMAN:GetMaxFilterRate())
@@ -216,7 +211,7 @@ local f = Def.ActorFrame {
 	},
 	UIElements.QuadButton(1, 1) .. {
 		InitCommand = function(self)
-			self:xy(frameX + frameWidth / 2, 175):zoomto(130, 18):halign(0):diffusealpha(0)
+			self:xy(frameWidth / 2 + 10, 70):zoomto(130, 18):halign(0):diffusealpha(0)
 		end,
 		MouseDownCommand = function(self, params)
 			if params.event == "DeviceButton_left mouse button" and active then
@@ -230,10 +225,10 @@ local f = Def.ActorFrame {
 			end
 		end,
 	},
-	UIElements.TextToolTip(1, 1, "Common Large") ..{
+	UIElements.TextToolTip(1, 1, "Common Normal") ..{
 		InitCommand = function(self)
-			self:xy(frameX + frameWidth / 2, 175 + spacingY):zoom(textzoom):halign(0)
-			self:diffuse(getMainColor("positive"))
+			self:xy(frameWidth / 2 + 10, 70 + spacingY):zoom(textzoom):halign(0)
+			self:diffuse(COLOR.TextMain)
 		end,
 		SetCommand = function(self)
 			self:settextf("%s:%5.1fx", translated_info["MinRate"], FILTERMAN:GetMinFilterRate())
@@ -253,7 +248,7 @@ local f = Def.ActorFrame {
 	},
 	UIElements.QuadButton(1, 1) .. {
 		InitCommand = function(self)
-			self:xy(frameX + frameWidth / 2, 175 + spacingY):zoomto(130, 18):halign(0):diffusealpha(0)
+			self:xy(frameWidth / 2 + 10, 70 + spacingY):zoomto(130, 18):halign(0):diffusealpha(0)
 		end,
 		MouseDownCommand = function(self, params)
 			if params.event == "DeviceButton_left mouse button" and active then
@@ -267,10 +262,10 @@ local f = Def.ActorFrame {
 			end
 		end,
 	},
-	UIElements.TextToolTip(1, 1, "Common Large") ..{
+	UIElements.TextToolTip(1, 1, "Common Normal") ..{
 		InitCommand = function(self)
-			self:xy(frameX + frameWidth / 2, 175 + spacingY * 2):zoom(textzoom):halign(0)
-			self:diffuse(getMainColor("positive"))
+			self:xy(frameWidth / 2 + 10, 70 + spacingY * 2):zoom(textzoom):halign(0)
+			self:diffuse(COLOR.TextMain)
 		end,
 		SetCommand = function(self)
 			if FILTERMAN:GetFilterMode() then
@@ -294,7 +289,7 @@ local f = Def.ActorFrame {
 	},
 	UIElements.QuadButton(1, 1) .. {
 		InitCommand = function(self)
-			self:xy(frameX + frameWidth / 2, 175 + spacingY * 2):zoomto(120, 18):halign(0):diffusealpha(0)
+			self:xy(frameWidth / 2 + 10, 70 + spacingY * 2):zoomto(120, 18):halign(0):diffusealpha(0)
 		end,
 		MouseDownCommand = function(self, params)
 			if params.event == "DeviceButton_left mouse button" and active then
@@ -304,21 +299,21 @@ local f = Def.ActorFrame {
 			end
 		end
 	},
-	UIElements.TextToolTip(1, 1, "Common Large") ..{
+	UIElements.TextToolTip(1, 1, "Common Normal") ..{
 		InitCommand = function(self)
-			self:xy(frameX + frameWidth / 2, 175 + spacingY * 3):zoom(textzoom):halign(0)
+			self:xy(frameWidth / 2 + 10, 70 + spacingY * 3):zoom(textzoom):halign(0)
 		end,
 		SetCommand = function(self)
 			local translated = translated_info["HighestOnly"]
 			if FILTERMAN:GetHighestSkillsetsOnly() then
-				self:settextf("%s: %s", translated, translated_info["On"]):maxwidth(frameWidth / 2 / textzoom - 50)
+				self:settextf("%s: %s", translated, translated_info["On"]):maxwidth(frameWidth / 2 / textzoom - 30)
 			else
-				self:settextf("%s: %s", translated, translated_info["Off"]):maxwidth(frameWidth / 2 / textzoom - 50)
+				self:settextf("%s: %s", translated, translated_info["Off"]):maxwidth(frameWidth / 2 / textzoom - 30)
 			end
 			if FILTERMAN:GetFilterMode() then
-				self:diffuse(1,1,1,0.2)
+				self:diffuse(COLOR.TextSub2)
 			else
-				self:diffuse(getMainColor("positive"))
+				self:diffuse(COLOR.TextMain)
 			end
 		end,
 		FilterModeChangedMessageCommand = function(self)
@@ -342,7 +337,7 @@ local f = Def.ActorFrame {
 	},
 	UIElements.QuadButton(1, 1) .. {
 		InitCommand = function(self)
-			self:xy(frameX + frameWidth / 2, 175 + spacingY * 3):zoomto(180, 18):halign(0):diffusealpha(0)
+			self:xy(frameWidth / 2 + 10, 70 + spacingY * 3):zoomto(160, 18):halign(0):diffusealpha(0)
 		end,
 		MouseDownCommand = function(self, params)
 			if params.event == "DeviceButton_left mouse button" and active and not FILTERMAN:GetFilterMode() then
@@ -352,21 +347,21 @@ local f = Def.ActorFrame {
 			end
 		end
 	},
-	UIElements.TextToolTip(1, 1, "Common Large") ..{
+	UIElements.TextToolTip(1, 1, "Common Normal") ..{
 		InitCommand = function(self)
-			self:xy(frameX + frameWidth / 2, 175 + spacingY * 4):zoom(textzoom):halign(0)
+			self:xy(frameWidth / 2 + 10, 70 + spacingY * 4):zoom(textzoom):halign(0)
 		end,
 		SetCommand = function(self)
 			local translated = translated_info["HighestDifficultyOnly"]
 			if FILTERMAN:GetHighestDifficultyOnly() then
-				self:settextf("%s: %s", translated, translated_info["On"]):maxwidth(frameWidth / 2 / textzoom - 50)
+				self:settextf("%s: %s", translated, translated_info["On"]):maxwidth(frameWidth / 2 / textzoom - 30)
 			else
-				self:settextf("%s: %s", translated, translated_info["Off"]):maxwidth(frameWidth / 2 / textzoom - 50)
+				self:settextf("%s: %s", translated, translated_info["Off"]):maxwidth(frameWidth / 2 / textzoom - 30)
 			end
 			if FILTERMAN:GetFilterMode() then
-				self:diffuse(1,1,1,0.2)
+				self:diffuse(COLOR.TextSub2)
 			else
-				self:diffuse(getMainColor("positive"))
+				self:diffuse(COLOR.TextMain)
 			end
 		end,
 		FilterModeChangedMessageCommand = function(self)
@@ -390,7 +385,7 @@ local f = Def.ActorFrame {
 	},
 	UIElements.QuadButton(1, 1) .. {
 		InitCommand = function(self)
-			self:xy(frameX + frameWidth / 2, 175 + spacingY * 4):zoomto(180, 18):halign(0):diffusealpha(0)
+			self:xy(frameWidth / 2 + 10, 70 + spacingY * 4):zoomto(160, 18):halign(0):diffusealpha(0)
 		end,
 		MouseDownCommand = function(self, params)
 			if params.event == "DeviceButton_left mouse button" and active and not FILTERMAN:GetFilterMode() then
@@ -400,17 +395,17 @@ local f = Def.ActorFrame {
 			end
 		end
 	},
-	LoadFont("Common Large") .. {
+	LoadFont("Common Normal") .. {
 		InitCommand = function(self)
-			self:xy(frameX + frameWidth / 2, 175 + spacingY * 6):zoom(textzoom):halign(0):settext("")
+			self:xy(frameWidth / 2 + 10, 70 + spacingY * 6):zoom(textzoom):halign(0):settext(""):diffuse(COLOR.TextMain)
 		end,
 		FilterResultsMessageCommand = function(self, msg)
 			self:settextf("%s: %i/%i", translated_info["Matches"], msg.Matches, msg.Total)
 		end
 	},
-	UIElements.TextToolTip(1, 1, "Common Large") .. {
+	UIElements.TextToolTip(1, 1, "Common Normal") .. {
 		BeginCommand = function(self)
-			self:xy(frameX + frameWidth / 2, 175 + spacingY * 7):zoom(textzoom):halign(0):maxwidth(300)
+			self:xy(frameWidth / 2 + 10, 70 + spacingY * 7):zoom(textzoom):halign(0):maxwidth(160):diffuse(COLOR.TextMain)
 			self.packlistFiltering = FILTERMAN:GetFilteringCommonPacks()
 			self.enabled = SCREENMAN:GetTopScreen():GetName() == "ScreenNetSelectMusic"
 			if not self.enabled then
@@ -439,11 +434,11 @@ local f = Def.ActorFrame {
 local function CreateFilterInputBox(i)
 	local t = Def.ActorFrame {
 		InitCommand = function(self)
-			self:y(-17)
+			self:y(0)
 		end,
-		LoadFont("Common Large") .. {
+		LoadFont("Common Normal") .. {
 			InitCommand = function(self)
-				self:addx(10):addy(175 + (i - 1) * spacingY):halign(0):zoom(textzoom)
+				self:addx(10):addy(70 + (i - 1) * spacingY):halign(0):zoom(textzoom):diffuse(COLOR.TextMain)
 			end,
 			SetCommand = function(self)
 				self:settext(i == (#ms.SkillSets + 1) and translated_info["Length"] or (i == (#ms.SkillSets + 2) and translated_info["BestPercent"] or ms.SkillSetsTranslated[i]))
@@ -451,9 +446,9 @@ local function CreateFilterInputBox(i)
 		},
 		UIElements.QuadButton(1, 1) .. {
 			InitCommand = function(self)
-				self:addx(i == (#ms.SkillSets + 1) and 159 or (i == (#ms.SkillSets + 2) and 159 or 150)):addy(175 + (i - 1) * spacingY):zoomto(
-					i == (#ms.SkillSets + 1) and 27 or (i == (#ms.SkillSets + 2) and 27 or 18),
-					18
+				self:addx(i == (#ms.SkillSets + 1) and 145 or (i == (#ms.SkillSets + 2) and 145 or 135)):addy(70 + (i - 1) * spacingY):zoomto(
+					i == (#ms.SkillSets + 1) and 27 or (i == (#ms.SkillSets + 2) and 27 or 22),
+					16
 				):halign(1)
 			end,
 			MouseDownCommand = function(self, params)
@@ -482,9 +477,9 @@ local function CreateFilterInputBox(i)
 				self:queuecommand("Set")
 			end
 		},
-		LoadFont("Common Large") .. {
+		LoadFont("Common Normal") .. {
 			InitCommand = function(self)
-				self:addx(i == (#ms.SkillSets + 1) and 159 or (i == (#ms.SkillSets + 2) and 159 or 150)):addy(175 + (i - 1) * spacingY):halign(1):maxwidth(60):zoom(
+				self:addx(i == (#ms.SkillSets + 1) and 145 or (i == (#ms.SkillSets + 2) and 145 or 135)):addy(70 + (i - 1) * spacingY):halign(1):maxwidth(60):zoom(
 					textzoom
 				)
 			end,
@@ -516,9 +511,9 @@ local function CreateFilterInputBox(i)
 		},
 		UIElements.QuadButton(1, 1) .. {
 			InitCommand = function(self)
-				self:addx(i == (#ms.SkillSets + 1) and 193 or (i == (#ms.SkillSets + 2) and 193 or 175)):addy(175 + (i - 1) * spacingY):zoomto(
-					i == (#ms.SkillSets + 1) and 27 or (i == (#ms.SkillSets + 2) and 27 or 18),
-					18
+				self:addx(i == (#ms.SkillSets + 1) and 175 or (i == (#ms.SkillSets + 2) and 175 or 160)):addy(70 + (i - 1) * spacingY):zoomto(
+					i == (#ms.SkillSets + 1) and 27 or (i == (#ms.SkillSets + 2) and 27 or 22),
+					16
 				):halign(1)
 			end,
 			MouseDownCommand = function(self, params)
@@ -547,9 +542,9 @@ local function CreateFilterInputBox(i)
 				self:queuecommand("Set")
 			end
 		},
-		LoadFont("Common Large") .. {
+		LoadFont("Common Normal") .. {
 			InitCommand = function(self)
-				self:addx(i == (#ms.SkillSets + 1) and 193 or (i == (#ms.SkillSets + 2) and 193 or 175)):addy(175 + (i - 1) * spacingY):halign(1):maxwidth(60):zoom(
+				self:addx(i == (#ms.SkillSets + 1) and 175 or (i == (#ms.SkillSets + 2) and 175 or 160)):addy(70 + (i - 1) * spacingY):halign(1):maxwidth(60):zoom(
 					textzoom
 				)
 			end,
@@ -583,15 +578,15 @@ local function CreateFilterInputBox(i)
 	return t
 end
 
---reset button
-f[#f + 1] = UIElements.TextButton(1, 1, "Common Large") .. {
+-- reset button
+f[#f + 1] = UIElements.TextButton(1, 1, "Common Normal") .. {
 	InitCommand = function(self)
-		self:xy(frameX + frameWidth - 150, frameY + 250 + spacingY * 2)
+		self:xy(frameWidth / 2 + 50, 70 + spacingY * 9)
 		local txt = self:GetChild("Text")
 		local bg = self:GetChild("BG")
 		txt:zoom(0.35)
 		txt:settext(THEME:GetString("TabFilter", "Reset"))
-		txt:diffuse(getMainColor("positive"))
+		txt:diffuse(COLOR.TextMain)
 		bg:zoomto(60, 20)
 	end,
 	RolloverUpdateCommand = function(self, params)
@@ -620,35 +615,6 @@ f[#f + 1] = UIElements.TextButton(1, 1, "Common Large") .. {
 		end
 	end,
 }
---[[
--- apply button
-f[#f + 1] = UIElements.TextButton(1, 1, "Common Large") .. {
-	InitCommand = function(self)
-		self:xy(frameX + frameWidth - 150, frameY + 250 + spacingY * -1)
-		local txt = self:GetChild("Text")
-		local bg = self:GetChild("BG")
-		txt:zoom(0.35)
-		txt:settext(THEME:GetString("TabFilter", "Apply"))
-		txt:diffuse(getMainColor("positive"))
-		bg:zoomto(60, 20)
-	end,
-	RolloverUpdateCommand = function(self, params)
-		if params.update == "in" then
-			self:diffusealpha(hoverAlpha)
-		else
-			self:diffusealpha(1)
-		end
-	end,
-	ClickCommand = function(self, params)
-		if params.update ~= "OnMouseDown" then return end
-		if params.event == "DeviceButton_left mouse button" and active then
-			MESSAGEMAN:Broadcast("NumericInputEnded")
-			SCREENMAN:set_input_redirected(PLAYER_1, false)
-			whee:SongSearch("")
-		end
-	end,
-}
-]]
 
 for i = 1, (#ms.SkillSets + 2) do
 	f[#f + 1] = CreateFilterInputBox(i)

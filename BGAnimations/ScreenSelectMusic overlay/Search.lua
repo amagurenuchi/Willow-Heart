@@ -1,6 +1,8 @@
 local searchstring = ""
-local frameX = SCREEN_WIDTH - 410
-local frameY = 300
+local frameWidth = capWideScale(360, 400)
+local frameX = SCREEN_WIDTH - frameWidth - 10
+local frameY = 95
+local frameHeight = SCREEN_HEIGHT - 135
 local active = false
 local whee
 local lastsearchstring = ""
@@ -25,10 +27,10 @@ local function searchInput(event)
 			end
 			MESSAGEMAN:Broadcast("EndingSearch")
 			MESSAGEMAN:Broadcast("TabChanged", {from = tind, to = 0})
-		elseif event.DeviceInput.button == "DeviceButton_space" then -- add space to the string
+		elseif event.DeviceInput.button == "DeviceButton_space" then
 			searchstring = searchstring .. " "
 		elseif event.DeviceInput.button == "DeviceButton_backspace" then
-			searchstring = searchstring:sub(1, -2) -- remove the last element of the string
+			searchstring = searchstring:sub(1, -2)
 		elseif event.DeviceInput.button == "DeviceButton_delete" then
 			searchstring = ""
 		else
@@ -36,7 +38,6 @@ local function searchInput(event)
 			if event.DeviceInput.button == "DeviceButton_v" and CtrlPressed then
 				searchstring = searchstring .. Arch.getClipboard()
 			elseif
-			--if not nil and (not a number or (ctrl pressed and not online))
 				event.char and event.char:match('[%%%+%-%!%@%#%$%^%&%*%(%)%=%_%.%,%:%;%\'%"%>%<%?%/%~%|%w%[%]%{%}%`%\\]') and
 					(not tonumber(event.char) or CtrlPressed or IgnoreTabInput > 1)
 			 then
@@ -72,14 +73,14 @@ local t = Def.ActorFrame {
 		SCREENMAN:GetTopScreen():AddInputCallback(searchInput)
 	end,
 	OffCommand = function(self)
-		self:bouncebegin(0.2):xy(-500, 0):diffusealpha(0)
+		self:decelerate(0.6):xy(SCREEN_WIDTH + 500, 0):diffusealpha(0)
 		self:sleep(0.04):queuecommand("Invis")
 	end,
 	InvisCommand= function(self)
 		self:visible(false)
 	end,
 	OnCommand = function(self)
-		self:bouncebegin(0.2):xy(0, 0):diffusealpha(1)
+		self:xy(SCREEN_WIDTH + 500, 0):decelerate(0.6):xy(0, 0):diffusealpha(1)
 	end,
 	SetCommand = function(self)
 		self:finishtweening()
@@ -100,17 +101,46 @@ local t = Def.ActorFrame {
 	TabChangedMessageCommand = function(self)
 		self:queuecommand("Set")
 	end,
-	LoadFont("Common Large") .. {
+	-- Salmon-colored backdrop offset quad
+	Def.Quad {
 		InitCommand = function(self)
-			self:xy(frameX + 250 - capWideScale(get43size(95), 10), frameY - 93):zoom(0.7):halign(0.5):maxwidth(470)
+			self:xy(frameX + 5, frameY + 5):zoomto(frameWidth, frameHeight):halign(0):valign(0):diffuse(COLOR.MainHighlight)
+		end
+	},
+	-- Main card background quad
+	Def.Quad {
+		InitCommand = function(self)
+			self:xy(frameX, frameY):zoomto(frameWidth, frameHeight):halign(0):valign(0):diffuse(COLOR.MainBackground)
+		end
+	},
+	-- Card border outline
+	UIElements.Border(frameWidth, frameHeight, 1) .. {
+		InitCommand = function(self)
+			self:xy(frameX + frameWidth / 2, frameY + frameHeight / 2):diffuse(COLOR.MainBorder)
+		end
+	},
+	-- Header bar
+	Def.Quad {
+		InitCommand = function(self)
+			self:xy(frameX, frameY):zoomto(frameWidth, 24):halign(0):valign(0):diffuse(COLOR.MainHighlight)
+		end
+	},
+	-- Header title label
+	LoadFont("Common Normal") .. {
+		InitCommand = function(self)
+			self:xy(frameX + 10, frameY + 12):halign(0):valign(0.5):zoom(0.55):diffuse(COLOR.TextMain):settext("SEARCH")
+		end
+	},
+	-- Search status label
+	LoadFont("Common Normal") .. {
+		InitCommand = function(self)
+			self:xy(frameX + frameWidth - 10, frameY + 12):zoom(0.45):halign(1):valign(0.5)
 		end,
 		SetCommand = function(self)
 			if active then
-				self:settextf("%s:", translated_info["Active"])
-				self:diffuse(getGradeColor("Grade_Tier10"))
+				self:settextf("%s:", translated_info["Active"]):diffuse(color("#000000"))
 			elseif not active and searchstring ~= "" then
-				self:settext(translated_info["Complete"])
-				self:diffuse(getGradeColor("Grade_Tier04"))
+				self:settext(translated_info["Complete"]):diffuse(COLOR.TextSub1)
 			else
 				self:settext("")
 			end
@@ -121,20 +151,21 @@ local t = Def.ActorFrame {
 		SetSearchStringMessageCommand = function(self, params)
 			if params.searchstring then
 				searchstring = params.searchstring
-				lastsearchstring = searchstring --i dont like this
+				lastsearchstring = searchstring
 				MESSAGEMAN:Broadcast("UpdateString")
 			end
 		end
 	},
+	-- Search input box background
 	Def.Quad {
 		InitCommand = function(self)
-			self:xy(frameX - capWideScale(3.5,-3.5), frameY - 46):zoomto(capWideScale(362.5,472), 44):align(0,0.5):diffuse(getMainColor("tabs"))
+			self:xy(frameX + 15, frameY + 35):zoomto(frameWidth - 30, 36):halign(0):valign(0):diffuse(COLOR.MainBorder):diffusealpha(0.15)
 		end,
 	},
-	LoadFont("Common Large") .. {
+	-- Search input query text
+	LoadFont("Common Normal") .. {
 		InitCommand = function(self)
-			self:xy(frameX + 250 - capWideScale(get43size(95), 10), frameY - 50):zoom(0.7)
-			self:halign(0.5):maxwidth(capWideScale(500,650))
+			self:xy(frameX + 25, frameY + 53):zoom(0.5):halign(0):valign(0.5):diffuse(COLOR.TextMain):maxwidth((frameWidth - 50) / 0.5)
 		end,
 		SetCommand = function(self)
 			self:settext(searchstring)
@@ -143,45 +174,43 @@ local t = Def.ActorFrame {
 			self:queuecommand("Set")
 		end
 	},
-	LoadFont("Common Large") .. {
+	-- Instruction lines inside container
+	LoadFont("Common Normal") .. {
 		InitCommand = function(self)
-			self:xy(frameX + 20, frameY - 200):zoom(0.4):halign(0)
+			self:xy(frameX + 15, frameY + 90):zoom(0.42):halign(0):diffuse(COLOR.TextMain)
 			self:settext(translated_info["ExplainStart"])
 		end
 	},
-	LoadFont("Common Large") .. {
+	LoadFont("Common Normal") .. {
 		InitCommand = function(self)
-			self:xy(frameX + 20, frameY - 175):zoom(0.4):halign(0)
+			self:xy(frameX + 15, frameY + 115):zoom(0.42):halign(0):diffuse(COLOR.TextMain)
 			self:settext(translated_info["ExplainBack"])
 		end
 	},
-	LoadFont("Common Large") .. {
+	LoadFont("Common Normal") .. {
 		InitCommand = function(self)
-			self:xy(frameX + 20, frameY - 150):zoom(0.4):halign(0)
+			self:xy(frameX + 15, frameY + 140):zoom(0.42):halign(0):diffuse(COLOR.TextMain)
 			self:settext(translated_info["ExplainDel"])
 		end
 	},
 	LoadFont("Common Normal") .. {
 		InitCommand = function(self)
-			self:xy(frameX + 20, frameY):zoom(0.5):halign(0)
-			local framexoffset = 20 - capWideScale(3.5,-3.5)
-			self:maxwidth((capWideScale(362.5,472) - framexoffset) / 0.5)
+			self:xy(frameX + 15, frameY + 175):zoom(0.42):halign(0):diffuse(COLOR.TextSub1)
+			self:maxwidth((frameWidth - 30) / 0.42)
 			self:settext(translated_info["ExplainLimit"])
 		end
 	},
 	LoadFont("Common Normal") .. {
 		InitCommand = function(self)
-			self:xy(frameX + 20, frameY + 15):zoom(0.5):align(0,0)
-			local framexoffset = 20 - capWideScale(3.5,-3.5)
-			self:maxwidth((capWideScale(362.5,472) - framexoffset) / 0.5)
+			self:xy(frameX + 15, frameY + 200):zoom(0.42):halign(0):diffuse(COLOR.TextSub1)
+			self:maxwidth((frameWidth - 30) / 0.42)
 			self:settext(translated_info["ExplainNumInput"])
 		end
 	},
 	LoadFont("Common Normal") .. {
 		InitCommand = function(self)
-			self:xy(frameX + 20, frameY + 50):zoom(0.5):align(0,0)
-			local framexoffset = 20 - capWideScale(3.5,-3.5)
-			self:maxwidth((capWideScale(362.5,472) - framexoffset) / 0.5)
+			self:xy(frameX + 15, frameY + 225):zoom(0.42):halign(0):diffuse(COLOR.TextSub1)
+			self:maxwidth((frameWidth - 30) / 0.42)
 			self:settext(translated_info["ExplainSuperSearch"])
 		end
 	}

@@ -121,9 +121,9 @@ local generalContent = Def.ActorFrame{
 	TabChangedMessageCommand = function(self, params)
 		self:stoptweening()
 		if params and params.to == 0 then
-			self:visible(true):bouncebegin(0.2):x(0):diffusealpha(1)
+			self:visible(true):x(SCREEN_WIDTH + 500):decelerate(0.6):x(0):diffusealpha(1)
 		else
-			self:bouncebegin(0.2):x(SCREEN_WIDTH + 300):diffusealpha(0)
+			self:decelerate(0.6):x(SCREEN_WIDTH + 500):diffusealpha(0)
 			self:sleep(0.04):queuecommand("Hide")
 		end
 	end,
@@ -395,50 +395,6 @@ local function selectTab(name)
 	end
 end
 
-panel = Def.ActorFrame{
-	Name = "TabPanel",
-	InitCommand = function(self) self:x(SCREEN_WIDTH + 300):y(330):diffusealpha(0):visible(false) end,
-	TabChangedMessageCommand = function(self, params)
-		local index = params and params.to or 0
-		self:stoptweening()
-		if index == 0 then
-			self:bouncebegin(0.2):x(SCREEN_WIDTH + 300):diffusealpha(0)
-			self:sleep(0.04):queuecommand("Hide")
-		else
-			self:queuecommand("Off")
-		end
-	end,
-	OffCommand = function(self)
-		self:bouncebegin(0.2):x(SCREEN_WIDTH + 300):diffusealpha(0)
-		self:sleep(0.04):queuecommand("SwapTab")
-	end,
-	HideCommand = function(self) self:visible(false) end,
-	SwapTabCommand = function(self)
-		updatePanel(self, pendingPanelTab)
-		self:x(SCREEN_WIDTH + 300):visible(true):diffusealpha(1):bouncebegin(0.2):x(SCREEN_WIDTH - 270)
-	end,
-	CurrentSongChangedMessageCommand = function(self) scoreIndex = 1; updatePanel(self, activeTab) end,
-	CurrentStepsP1ChangedMessageCommand = function(self) scoreIndex = 1; updatePanel(self, activeTab) end,
-	TabRefreshMessageCommand = function(self) updatePanel(self, activeTab) end,
-}
-
-panel[#panel+1] = Def.Quad{InitCommand=function(self) self:zoomto(510,530):diffuse(COLOR.MainBackground):diffusealpha(0.94) end}
-panel[#panel+1] = Def.Quad{InitCommand=function(self) self:y(-205):zoomto(510,2):diffuse(COLOR.MainHighlight) end}
-panel[#panel+1] = LoadFont("Common Normal") .. {Name="PanelTitle", InitCommand=function(self) self:xy(-230,-180):halign(0):zoom(0.8):diffuse(COLOR.TextMain) end}
-panel[#panel+1] = LoadFont("Common Normal") .. {Name="PanelSubtitle", InitCommand=function(self) self:xy(-230,-145):halign(0):zoom(0.42):diffuse(COLOR.TextSub1) end}
-for i = 1, 8 do
-	panel[#panel+1] = LoadFont("Common Normal") .. {Name="PanelLine" .. i, InitCommand=function(self) self:xy(-230,-95 + (i-1)*42):halign(0):zoom(0.48):diffuse(COLOR.TextMain) end}
-end
-for i = 1, 3 do
-	local actionIndex = i
-	panel[#panel+1] = Def.ActorFrame{
-		Name = "Action" .. i,
-		InitCommand = function(self) self:xy(-230 + (i-1)*155, 245) end,
-		Def.Quad{Name="Fill",InitCommand=function(self) self:zoomto(140,28):diffuse(COLOR.MainHighlight):diffusealpha(0.8) end},
-		UIElements.QuadButton(2)..{InitCommand=function(self) self:zoomto(140,28):diffusealpha(0) end,MouseClickCommand=function() panelAction(actionIndex) end},
-		LoadFont("Common Normal")..{Name="Text",InitCommand=function(self) self:zoom(0.32):maxwidth(125/0.32) end},
-	}
-end
 
 t[#t+1] = LoadActor("common")
 t[#t+1] = Def.ActorFrame{Name="StepsDisplay", InitCommand=function(self) self.nested=false end}

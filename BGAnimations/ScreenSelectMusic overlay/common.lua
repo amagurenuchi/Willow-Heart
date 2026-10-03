@@ -43,6 +43,9 @@ function isOver(actor) return actor and actor:IsOver() or false end
 function MPinput(_) return false end
 function tilDeathEmulationEnabled(_) return false end
 function byMSD(value) return GetRatingColor(tonumber(value) or 0) end
+
+-- Keep judgement colors available even if the shared color script is loaded
+-- after this overlay during screen startup.
 function getClearTypeFromScore(_, _, mode) return mode == 2 and COLOR.TextSub2 or "" end
 colorConfig = colorConfig or {get_data = function() return {clearType = {NoPlay = "#666666"}} end}
 function GetPlayerOrMachineProfile(pn)
@@ -52,14 +55,30 @@ function getCurRateValue()
 	local options = GAMESTATE:GetSongOptionsObject("ModsLevel_Current")
 	return options and options.MusicRate and options:MusicRate() or 1
 end
-function getShortDifficulty(value) return tostring(value or "--") end
+function getShortDifficulty(value) return GetDifficultyLabel(value) end
 function getGradeColor(grade) return GetGradeColor(grade) end
 function getScoreDate(score) return score and score.GetDateString and score:GetDateString() or "--" end
-function getJudgeStrings(judge) return tostring(judge or "") end
-function getModifierTranslations() return {} end
+function getJudgeStrings(judge)
+	local map = {
+		TapNoteScore_W1 = "Marvelous",
+		TapNoteScore_W2 = "Perfect",
+		TapNoteScore_W3 = "Great",
+		TapNoteScore_W4 = "Good",
+		TapNoteScore_W5 = "Bad",
+		TapNoteScore_Miss = "Miss",
+		HoldNoteScore_Held = "Held",
+		HoldNoteScore_LetGo = "Let Go"
+	}
+	return map[tostring(judge)] or tostring(judge or "")
+end
+function getModifierTranslations(mods)
+	if type(mods) == "string" then return mods end
+	if type(mods) == "table" then return table.concat(mods, ", ") end
+	return tostring(mods or "")
+end
 function byGrade(value) return GetGradeColor(value) end
-function byJudgment(value) return COLOR.TextMain end
-function byDifficulty(value) return COLOR.TextMain end
+function byJudgment(value) return GetJudgementColor(value) end
+function byDifficulty(value) return GetDifficultyColor(value) end
 function byValidity(value) return value and COLOR.TextMain or COLOR.TextSub2 end
 
 if not tags then

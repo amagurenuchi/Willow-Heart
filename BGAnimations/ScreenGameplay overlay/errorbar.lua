@@ -10,15 +10,6 @@ local bars = {}
 local lastOffset
 local lastColor = color("#FFFFFF")
 
-local judgmentColors = {
-	TapNoteScore_W1 = color("#77CCFF"),
-	TapNoteScore_W2 = color("#FFDD44"),
-	TapNoteScore_W3 = color("#55EE77"),
-	TapNoteScore_W4 = color("#AA66FF"),
-	TapNoteScore_W5 = color("#FF8833"),
-	TapNoteScore_Miss = color("#FF4444"),
-}
-
 local function updateBar(self)
 	if lastOffset == nil then return end
 	self:stoptweening():x(SCREEN_CENTER_X + math.max(-frameWidth / 2, math.min(frameWidth / 2, lastOffset * 1.5)))
@@ -42,7 +33,7 @@ local t = Def.ActorFrame {
 		local offsetMs = params.TapNoteOffset and tonumber(params.TapNoteOffset) * 1000 or tonumber(params.Offset)
 		if offsetMs == nil or score == "TapNoteScore_HitMine" or score == "TapNoteScore_None" then return end
 		lastOffset = offsetMs
-		lastColor = judgmentColors[score] or color("#FFFFFF")
+		lastColor = GetJudgementColor(score)
 		currentBar = (currentBar % barCount) + 1
 		bars[currentBar]:playcommand("UpdateErrorBar")
 	end,

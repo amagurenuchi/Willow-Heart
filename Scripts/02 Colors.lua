@@ -17,26 +17,6 @@ COLOR = {
 	SongMarathon = HSV(342,0.5,0.75),		-- Red
 	SongUltraMarathon = HSV(288,0.5,0.75),	-- Purple
 
-	GradeColors = {
-		Grade_Tier01 = "#000000",
-		Grade_Tier02 = "#66CCFF",
-		Grade_Tier03 = "#66CCFF",
-		Grade_Tier04 = "#66CCFF",
-		Grade_Tier05 = "#EEBB00",
-		Grade_Tier06 = "#EEBB00",
-		Grade_Tier07 = "#EEBB00",
-		Grade_Tier08 = "#66CC66",
-		Grade_Tier09 = "#66CC66",
-		Grade_Tier10 = "#66CC66",
-		Grade_Tier11 = "#DA5757",
-		Grade_Tier12 = "#DA5757",
-		Grade_Tier13 = "#DA5757",
-		Grade_Tier14 = "#5B78BB",
-		Grade_Tier15 = "#C97BFF",
-		Grade_Tier16 = "#8C6239",
-		Grade_Failed = "#CDCDCD",
-	},
-
 	ClearTypeColors = {
 		ClearType_MFC = "#66CCFF", ClearType_WF = "#DDDDDD", ClearType_SDP = "#CC8800",
 		ClearType_PFC = "#EEAA00", ClearType_BF = "#999999", ClearType_SDG = "#448844",
@@ -45,15 +25,36 @@ COLOR = {
 		ClearType_Failed = "#E61E25",
 		ClearType_Invalid = "#E61E25", ClearType_Noplay = "#666666", ClearType_None = "#666666",
 	},
-}
 
-function GetGradeColor(grade)
-	local key = tostring(grade)
-	return color(COLOR.GradeColors[key] or "#666666")
-end
+	JudgementColors = {
+		TapNoteScore_W1 = "#d0ecff",
+		TapNoteScore_W2 = "#DDBB22",
+		TapNoteScore_W3 = "#66CC66",
+		TapNoteScore_W4 = "#445dcc",
+		TapNoteScore_W5 = "#c438a5",
+		TapNoteScore_Miss = "#ff0000",
+		HoldNoteScore_Held = "#fffb1d",
+		HoldNoteScore_LetGo = "#ff0000",
+		Ridiculous = "#FFAAFF", -- unused for now, unless...
+	},
+
+	DifficultyColors = {
+		Beginner = "#66CCFF", Easy = "#66DD88", Medium = "#FFDD66",
+		Hard = "#FF9966", Challenge = "#FF6699", Edit = "#CC99FF",
+	},
+}
 
 function GetClearTypeColor(clearType)
 	return color(COLOR.ClearTypeColors[tostring(clearType)] or "#666666")
+end
+
+function GetJudgementColor(judgement)
+	return color(COLOR.JudgementColors[tostring(judgement)] or "#4C4C4C")
+end
+
+function GetDifficultyColor(diff)
+	local key = diff and ToEnumShortString(diff) or ""
+	return color(COLOR.DifficultyColors[key] or "#AAB3C4")
 end
 
 

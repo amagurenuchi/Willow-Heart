@@ -1,4 +1,19 @@
 local hoverAlpha = 0.6
+local frameWidth = capWideScale(360, 400)
+local frameX = SCREEN_WIDTH - frameWidth - 10
+local frameY = 95
+local frameHeight = SCREEN_HEIGHT - 135
+local fontScale = 0.25
+
+local scoreYspacing = 13
+local distY = 15
+local offsetX = -10
+local offsetY = 20
+local rankingPage = 1
+local rankingWidth = frameWidth - capWideScale(15, 50)
+local rankingX = capWideScale(30, 50)
+local rankingY = capWideScale(40, 40)
+local rankingTitleSpacing = (rankingWidth / (#ms.SkillSets))
 
 local update = false
 local clickedForSinglePlaylist = false
@@ -7,14 +22,14 @@ local t = Def.ActorFrame {
 		self:queuecommand("Set"):visible(false)
 	end,
 	OffCommand = function(self)
-		self:bouncebegin(0.2):xy(-500, 0):diffusealpha(0)
+		self:decelerate(0.6):xy(SCREEN_WIDTH + 500, frameY):diffusealpha(0)
 		self:sleep(0.04):queuecommand("Invis")
 	end,
 	InvisCommand= function(self)
 		self:visible(false)
 	end,
 	OnCommand = function(self)
-		self:bouncebegin(0.2):xy(0, 0):diffusealpha(1)
+		self:xy(SCREEN_WIDTH + 500, frameY):decelerate(0.6):xy(frameX, frameY):diffusealpha(1)
 	end,
 	SetCommand = function(self)
 		self:finishtweening()
@@ -32,22 +47,6 @@ local t = Def.ActorFrame {
 		self:queuecommand("Set")
 	end
 }
-
-local frameX = SCREEN_WIDTH - capWideScale(360, 400) - 10
-local frameY = 45
-local frameWidth = capWideScale(360, 400)
-local frameHeight = 350
-local fontScale = 0.25
-
-local scoreYspacing = 13
-local distY = 15
-local offsetX = -10
-local offsetY = 20
-local rankingPage = 1
-local rankingWidth = frameWidth - capWideScale(15, 50)
-local rankingX = capWideScale(30, 50)
-local rankingY = capWideScale(40, 40)
-local rankingTitleSpacing = (rankingWidth / (#ms.SkillSets))
 local whee
 
 local singleplaylistactive = false
@@ -93,25 +92,35 @@ local translated_info = {
 
 t[#t + 1] = Def.Quad {
 	InitCommand = function(self)
-		self:xy(frameX, frameY):zoomto(frameWidth, frameHeight):halign(0):valign(0):diffuse(getMainColor("tabs"))
+		self:xy(5, 5):zoomto(frameWidth, frameHeight):halign(0):valign(0):diffuse(COLOR.MainHighlight)
 	end
 }
 t[#t + 1] = Def.Quad {
 	InitCommand = function(self)
-		self:xy(frameX, frameY):zoomto(frameWidth, offsetY):halign(0):valign(0)
-		self:diffuse(getMainColor("frames")):diffusealpha(0.5)
+		self:xy(0, 0):zoomto(frameWidth, frameHeight):halign(0):valign(0):diffuse(COLOR.MainBackground)
+	end
+}
+t[#t + 1] = UIElements.Border(frameWidth, frameHeight, 1) .. {
+	InitCommand = function(self)
+		self:xy(frameWidth / 2, frameHeight / 2):diffuse(COLOR.MainBorder)
+	end
+}
+t[#t + 1] = Def.Quad {
+	InitCommand = function(self)
+		self:xy(0, 0):zoomto(frameWidth, offsetY):halign(0):valign(0)
+		self:diffuse(COLOR.MainHighlight)
 	end
 }
 t[#t + 1] = LoadFont("Common Normal") .. {
 	InitCommand = function(self)
-		self:xy(frameX + 5, frameY + offsetY - 11):zoom(0.65):halign(0)
-		self:diffuse(Saturation(getMainColor("positive"), 0.1))
+		self:xy(10, offsetY / 2):zoom(0.55):halign(0):valign(0.5)
+		self:diffuse(COLOR.TextMain)
 		self:settext(translated_info["Title"])
 	end
 }
 t[#t + 1] = LoadFont("Common Normal") .. {
 	InitCommand = function(self)
-		self:xy(frameWidth, frameY + offsetY - 11):zoom(0.65):halign(1)
+		self:xy(frameWidth - 10, offsetY / 2):zoom(0.35):halign(1):valign(0.5):diffuse(COLOR.TextSub1)
 	end,
 	DisplaySinglePlaylistMessageCommand = function(self)
 		self:settext(translated_info["ExplainAdd"])
@@ -133,7 +142,7 @@ end
 
 local r = Def.ActorFrame {
 	InitCommand = function(self)
-		self:xy(frameX, frameY)
+		self:xy(0, 0)
 	end,
 	OnCommand = function(self)
 		whee = SCREENMAN:GetTopScreen():GetMusicWheel()
@@ -166,7 +175,7 @@ local r = Def.ActorFrame {
 	end,
 	LoadFont("Common Large") .. {
 		InitCommand = function(self)
-			self:xy(frameX, rankingY):zoom(0.4):halign(0):maxwidth(460)
+			self:xy(10, rankingY):zoom(0.4):halign(0):maxwidth(frameWidth - 40):diffuse(COLOR.TextMain)
 		end,
 		DisplaySinglePlaylistMessageCommand = function(self)
 			pl = SONGMAN:GetActivePlaylist()
@@ -881,8 +890,8 @@ local function PlaylistTitleDisplayButton(i)
 		LoadFont("Common Large") .. {
 			Name = "Text",
 			InitCommand = function(self)
-				self:halign(0):maxwidth(frameWidth * 3 + 140)
-				self:diffuse(getMainColor("positive"))
+				self:halign(0):maxwidth((frameWidth - 100) / fontScale)
+				self:diffuse(COLOR.TextMain)
 			end,
 			AllDisplayMessageCommand = function(self)
 				self:zoom(fontScale)
@@ -1024,7 +1033,7 @@ local playlists = Def.ActorFrame {
 -- Buttons for general playlist manipulation
 local b = Def.ActorFrame {
 	InitCommand = function(self)
-		self:xy(100, frameHeight + 30)
+		self:xy(10, frameHeight - 30)
 	end,
 	DisplaySinglePlaylistMessageCommand = function(self)
 		self:visible(false)
@@ -1047,7 +1056,7 @@ end
 -- next/prev for all playlists
 r[#r + 1] = Def.ActorFrame {
 	InitCommand = function(self)
-		self:xy(frameX + 10, frameY + rankingY + 250)
+		self:xy(10, frameHeight - 30)
 	end,
 	UIElements.TextToolTip(1, 1, "Common Large") .. {
 		InitCommand = function(self)

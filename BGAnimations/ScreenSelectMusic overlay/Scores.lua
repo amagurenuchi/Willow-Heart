@@ -13,10 +13,10 @@ local nestedTabs = {
 }
 local hasReplayData
 
-local frameX = SCREEN_WIDTH - (SCREEN_WIDTH * 0.52) - 10
-local frameY = 40
-local frameWidth = SCREEN_WIDTH * 0.56
-local frameHeight = 368
+local frameX = SCREEN_WIDTH - capWideScale(360, 400) - 10
+local frameY = 95
+local frameWidth = capWideScale(360, 400)
+local frameHeight = SCREEN_HEIGHT - 135
 local fontScale = 0.4
 local offsetX = 10
 local offsetY = 20
@@ -29,6 +29,10 @@ local netPageButtonHeight = 50
 local headeroffY = 10
 
 local selectedrateonly
+-- getRateTable() walks all saved scores for the chart.  Keep its result while
+-- the chart is unchanged; this actor receives several refresh messages while
+-- the music wheel settles and rebuilding it on each one causes visible hitching.
+local rateTableChartKey
 
 local judges = {
 	"TapNoteScore_W1",
@@ -129,7 +133,7 @@ local ret = Def.ActorFrame {
 		end
 	end,
 	OffCommand = function(self)
-		self:bouncebegin(0.2):xy(-500, 0):diffusealpha(0)
+		self:decelerate(0.6):xy(SCREEN_WIDTH + 500, 0):diffusealpha(0)
 		self:sleep(0.04):queuecommand("Invis")
 	end,
 	InvisCommand= function(self)
@@ -137,7 +141,7 @@ local ret = Def.ActorFrame {
 		self:GetChild("LocalScores"):visible(false)
 	end,
 	OnCommand = function(self)
-		self:bouncebegin(0.2):xy(0, 0):diffusealpha(1)
+		self:xy(SCREEN_WIDTH + 500, 0):decelerate(0.6):xy(0, 0):diffusealpha(1)
 		if getTabIndex() == 2 and nestedTab == 1 then
 			self:GetChild("LocalScores"):visible(true)
 		else
@@ -307,7 +311,12 @@ local t = Def.ActorFrame {
 	OnCommand = function(self)
 		if nestedTab == 1 and self:IsVisible() then
 			if GAMESTATE:GetCurrentSong() ~= nil then
-				rtTable = getRateTable()
+				local steps = GAMESTATE:GetCurrentSteps()
+				local chartKey = steps and steps:GetChartKey()
+				if chartKey ~= rateTableChartKey or rtTable == nil then
+					rtTable = getRateTable()
+					rateTableChartKey = chartKey
+				end
 				if rtTable ~= nil then
 					rates, rateIndex = getUsedRates(rtTable)
 					scoreIndex = 1
@@ -326,6 +335,8 @@ local t = Def.ActorFrame {
 	end,
 	CurrentStepsChangedMessageCommand = function(self)
 		if getTabIndex() == 2 then
+			-- CurrentStepsChanged can arrive before the wheel's chart-change
+			-- messages.  OnCommand will rebuild only when this key is new.
 			self:playcommand("On")
 			if rtTable == nil or #rtTable == 0 or rates == nil or #rates == 0 or rates[rateIndex] == nil or rtTable[rates[rateIndex]] == nil then
 				hasReplayData = false
@@ -375,15 +386,26 @@ local t = Def.ActorFrame {
 		setScoreForPlot(score)
 	end,
 	Def.Quad {
+		Name = "BackdropShadow",
+		InitCommand = function(self)
+			self:xy(5, 5):zoomto(frameWidth, frameHeight):halign(0):valign(0):diffuse(COLOR.MainHighlight)
+		end
+	},
+	Def.Quad {
 		Name = "FrameDisplay",
 		InitCommand = function(self)
-			self:zoomto(frameWidth, frameHeight):halign(0):valign(0):diffuse(getMainColor("tabs"))
+			self:xy(0, 0):zoomto(frameWidth, frameHeight):halign(0):valign(0):diffuse(getMainColor("tabs"))
 		end,
 		CollapseCommand = function(self)
 			self:visible(false)
 		end,
 		ExpandCommand = function(self)
 			self:visible(true)
+		end
+	},
+	UIElements.Border(frameWidth, frameHeight, 1) .. {
+		InitCommand = function(self)
+			self:xy(frameWidth / 2, frameHeight / 2):diffuse(COLOR.MainBorder)
 		end
 	}
 }
@@ -400,7 +422,7 @@ local l = Def.ActorFrame {
 	InitCommand = function(self)
 		self:xy(offsetX, offsetY + headeroffY)
 	end,
-	LoadFont("Common Large") .. {
+	LoadFont("DFPGothic 64px") .. {
 		Name = "Grades",
 		InitCommand = function(self)
 			self:y(20):zoom(0.65):halign(0):maxwidth(60 / 0.65):settext("")
@@ -456,7 +478,7 @@ local l = Def.ActorFrame {
 	LoadFont("Common Normal") .. {
 		Name = "Score",
 		InitCommand = function(self)
-			self:xy(65, 43):zoom(0.5):halign(0):settext("")
+			self:xy(65, 43):zoom(0.5):halign(0):settext(""):diffuse(COLOR.TextMain)
 		end,
 		DisplayCommand = function(self)
 			if score:GetWifeScore() == 0 then
@@ -474,17 +496,18 @@ local l = Def.ActorFrame {
 	LoadFont("Common Normal") .. {
 		Name = "ClearType",
 		InitCommand = function(self)
-			self:y(44):zoom(0.5):halign(0):settext(""):diffuse(color(colorConfig:get_data().clearType["NoPlay"]))
+			self:xy(frameWidth - offsetX * 2 - 10, 5):zoom(0.5):halign(1):settext(""):diffuse(COLOR.TextSub2)
 		end,
 		DisplayCommand = function(self)
-			self:settext(getClearTypeFromScore(pn, score, 0))
-			self:diffuse(getClearTypeFromScore(pn, score, 2))
+			local clearType = getClearType(pn, GAMESTATE:GetCurrentSteps(), score)
+			self:settext(getClearTypeShortText(clearType))
+			self:diffuse(getClearTypeColor(clearType))
 		end
 	},
 	LoadFont("Common Normal") .. {
 		Name = "Mods",
 		InitCommand = function(self)
-			self:y(63):zoom(0.4):halign(0):maxwidth(capWideScale(690,1000))
+			self:y(63):zoom(0.4):halign(0):maxwidth(capWideScale(690,1000)):diffuse(COLOR.TextMain)
 			self:settextf("%s:", translated_info["Mods"]):settext("")
 		end,
 		DisplayCommand = function(self)
@@ -494,7 +517,7 @@ local l = Def.ActorFrame {
 	LoadFont("Common Normal") .. {
 		Name = "Date",
 		InitCommand = function(self)
-			self:y(78):zoom(0.4):halign(0):settextf("%s:", translated_info["DateAchieved"]):settext("")
+			self:y(78):zoom(0.4):halign(0):diffuse(COLOR.TextMain):settextf("%s:", translated_info["DateAchieved"]):settext("")
 		end,
 		DisplayCommand = function(self)
 			self:settextf("%s: %s", translated_info["DateAchieved"], getScoreDate(score))
@@ -503,7 +526,7 @@ local l = Def.ActorFrame {
 	LoadFont("Common Normal") .. {
 		Name = "Combo",
 		InitCommand = function(self)
-			self:y(93):zoom(0.4):halign(0):settextf("%s:", translated_info["MaxCombo"]):settext("")
+			self:y(93):zoom(0.4):halign(0):diffuse(COLOR.TextMain):settextf("%s:", translated_info["MaxCombo"]):settext("")
 		end,
 		DisplayCommand = function(self)
 			self:settextf("%s: %d", translated_info["MaxCombo"], score:GetMaxCombo())
@@ -512,7 +535,7 @@ local l = Def.ActorFrame {
 	LoadFont("Common Normal") .. {
 		Name = "ComboBreaks",
 		InitCommand = function(self)
-			self:y(108):zoom(0.4):halign(0):settextf("%s:", translated_info["ComboBreaks"]):settext("")
+			self:y(108):zoom(0.4):halign(0):diffuse(COLOR.TextMain):settextf("%s:", translated_info["ComboBreaks"]):settext("")
 		end,
 		DisplayCommand = function(self)
 			local comboBreaks = getScoreComboBreaks(score)
@@ -525,7 +548,7 @@ local l = Def.ActorFrame {
 	},
 	UIElements.TextToolTip(1, 1, "Common Normal") .. {
 		InitCommand = function(self)
-			self:xy(frameWidth - offsetX - frameX, frameHeight - headeroffY - 15 - offsetY):zoom(0.5):halign(1)
+			self:xy(frameWidth - offsetX * 2 - 10, frameHeight - headeroffY - 15 - offsetY):zoom(0.5):halign(1)
 			if GAMESTATE:GetCurrentSteps() == nil then
 				self:settext(translated_info["NoChart"])
 			else
@@ -553,7 +576,7 @@ local l = Def.ActorFrame {
 	LoadFont("Common Normal") .. {
 		Name = "Judge",
 		InitCommand = function(self)
-			self:xy(frameX + offsetX + 55,frameHeight - headeroffY - 65 - offsetY):zoom(0.45):halign(0.5):settext("")
+			self:xy(offsetX + 55,frameHeight - headeroffY - 65 - offsetY):zoom(0.45):halign(0.5):settext("")
 		end,
 		DisplayCommand = function(self)
 			local j = table.find(ms.JudgeScalers, notShit.round(score:GetJudgeScale(), 2))
@@ -565,7 +588,7 @@ local l = Def.ActorFrame {
 	LoadFont("Common Normal") .. {
 		Name = "ChordCohesion",
 		InitCommand = function(self)
-			self:xy(frameX + offsetX + 55,frameHeight - headeroffY - 50 - offsetY):zoom(0.4):halign(0.5):settext("")
+			self:xy(offsetX + 55,frameHeight - headeroffY - 50 - offsetY):zoom(0.4):halign(0.5):settext("")
 		end,
 		DisplayCommand = function(self)
 			if score:GetChordCohesion() then
@@ -573,7 +596,7 @@ local l = Def.ActorFrame {
 				self:diffuse(1,0,0,1)
 			else
 				self:settextf("%s: %s", translated_info["ChordCohesion"], translated_info["No"])
-				self:diffuse(1,1,1,1)
+				self:diffuse(color("#000000"))
 			end
 		end
 	},
@@ -582,7 +605,7 @@ local l = Def.ActorFrame {
 local function makeText(index)
 	return UIElements.TextToolTip(1, 1, "Common Normal") .. {
 		InitCommand = function(self)
-			self:xy(frameWidth - frameX, offsetY + 100 + (index * 15)):zoom(fontScale + 0.05):halign(1):settext("")
+			self:xy(frameWidth - 15, offsetY + 100 + (index * 15)):zoom(fontScale + 0.05):halign(1):settext("")
 		end,
 		DisplayCommand = function(self)
 			local count = 0
@@ -591,11 +614,7 @@ local function makeText(index)
 			end
 			if index <= #rates then
 				self:settextf("%s (%d)", rates[index], count)
-				if index == rateIndex then
-					self:diffuse(color("#FFFFFF"))
-				else
-					self:diffuse(getMainColor("positive"))
-				end
+				self:diffuse(index == rateIndex and COLOR.MainHighlight or color("#000000"))
 			else
 				self:settext("")
 			end
@@ -639,7 +658,7 @@ local function makeJudge(index, judge)
 		BeginCommand = function(self)
 			if judge == "Ridiculous" then
 				self:settext("Ridiculous")
-				self:diffuse(color("1,0.85,1,1"))
+				self:diffuse(byJudgment(judge))
 			else
 				self:settext(getJudgeStrings(judge))
 				self:diffuse(byJudgment(judge))
@@ -649,7 +668,7 @@ local function makeJudge(index, judge)
 
 	t[#t + 1] = LoadFont("Common Normal") .. {
 		InitCommand = function(self)
-			self:x(127):zoom(0.55):halign(1):settext("0")
+			self:x(127):zoom(0.55):halign(1):settext("0"):diffuse(color("#000000"))
 		end,
 		DisplayCommand = function(self)
 			if judge ~= "HoldNoteScore_Held" and judge ~= "HoldNoteScore_LetGo" then
@@ -668,7 +687,7 @@ local function makeJudge(index, judge)
 
 	t[#t + 1] = LoadFont("Common Normal") .. {
 		InitCommand = function(self)
-			self:x(130):zoom(0.3):halign(0):settext("")
+			self:x(130):zoom(0.3):halign(0):settext(""):diffuse(color("#000000"))
 		end,
 		DisplayCommand = function(self)
 			if judge ~= "HoldNoteScore_Held" and judge ~= "HoldNoteScore_LetGo" then
@@ -739,7 +758,7 @@ l[#l + 1] = UIElements.TextToolTip(1, 1, "Common Normal") .. {
 			self:diffuse(getMainColor("positive")):zoom(0.55)
 		else
 			self:settext(translated_info["NoReplayData"])
-			self:diffuse(1,1,1,1):zoom(0.4)
+			self:diffuse(color("#000000")):zoom(0.4)
 		end
 	end,
 	MouseOverCommand = function(self)
@@ -769,7 +788,7 @@ l[#l + 1] = Def.ActorFrame {
 	UIElements.QuadButton(1, 1) .. {
 		Name = "EvalViewQuad",
 		InitCommand = function(self)
-			self:xy((frameWidth - offsetX - frameX) / 2.1, frameHeight - headeroffY - 17 - offsetY):diffuse(0,0,0,0)
+			self:xy((frameWidth - offsetX * 2) / 2.1, frameHeight - headeroffY - 17 - offsetY):diffuse(0,0,0,0)
 			self:zoomtowidth(145):zoomtoheight(21)
 		end,
 		BeginCommand = function(self)
@@ -801,7 +820,7 @@ l[#l + 1] = Def.ActorFrame {
 	LoadFont("Common Large") .. {
 		Name = "EvalViewer",
 		InitCommand = function(self)
-			self:xy((frameWidth - offsetX - frameX) / 2.1, frameHeight - headeroffY - 18 - offsetY):zoom(0.35):settext("")
+			self:xy((frameWidth - offsetX * 2) / 2.1, frameHeight - headeroffY - 18 - offsetY):zoom(0.35):settext("")
 			self:diffuse(getMainColor("positive"))
 		end,
 		BeginCommand = function(self)
@@ -822,7 +841,7 @@ l[#l + 1] = Def.ActorFrame {
 l[#l + 1] = UIElements.TextToolTip(1, 1, "Common Normal") .. {
 	Name = "TheDootButton",
 	InitCommand = function(self)
-		self:xy(frameWidth - offsetX - frameX, frameHeight - headeroffY - 35 - offsetY):zoom(0.525):halign(1):settext("")
+		self:xy(frameWidth - offsetX * 2 - 10, frameHeight - headeroffY - 35 - offsetY):zoom(0.525):halign(1):settext("")
 		self:diffuse(getMainColor("positive"))
 	end,
 	DisplayCommand = function(self)
@@ -848,7 +867,7 @@ l[#l + 1] = UIElements.TextToolTip(1, 1, "Common Normal") .. {
 l[#l + 1] = UIElements.TextToolTip(1, 1, "Common Normal") .. {
 	Name = "TheDootButtonTWO",
 	InitCommand = function(self)
-		self:xy(frameWidth - offsetX - frameX, frameHeight - headeroffY - 49 - offsetY):zoom(0.425):halign(1):settext("")
+		self:xy(frameWidth - offsetX * 2 - 10, frameHeight - headeroffY - 49 - offsetY):zoom(0.425):halign(1):settext("")
 		self:diffuse(getMainColor("positive"))
 	end,
 	DisplayCommand = function(self)
@@ -873,7 +892,7 @@ l[#l + 1] = UIElements.TextToolTip(1, 1, "Common Normal") .. {
 l[#l + 1] = UIElements.TextToolTip(1, 1, "Common Normal") .. {
 	Name = "TheDootButtonTHREEEEEEEE",
 	InitCommand = function(self)
-		self:xy(frameWidth - offsetX - frameX, frameHeight - headeroffY - 63 - offsetY):zoom(0.425):halign(1):settext("")
+		self:xy(frameWidth - offsetX * 2 - 10, frameHeight - headeroffY - 63 - offsetY):zoom(0.425):halign(1):settext("")
 		self:diffuse(getMainColor("positive"))
 	end,
 	DisplayCommand = function(self)
@@ -898,7 +917,7 @@ l[#l + 1] = UIElements.TextToolTip(1, 1, "Common Normal") .. {
 l[#l + 1] = UIElements.TextToolTip(1, 1, "Common Normal") .. {
 	Name = "TheDootButtonFOUR",
 	InitCommand = function(self)
-		self:xy(frameWidth - offsetX - frameX, frameHeight - headeroffY - 77 - offsetY):zoom(0.425):halign(1):settext("")
+		self:xy(frameWidth - offsetX * 2 - 10, frameHeight - headeroffY - 77 - offsetY):zoom(0.425):halign(1):settext("")
 		self:diffuse(getMainColor("positive"))
 	end,
 	DisplayCommand = function(self)
@@ -923,7 +942,7 @@ l[#l + 1] = UIElements.TextToolTip(1, 1, "Common Normal") .. {
 l[#l + 1] = UIElements.TextToolTip(1, 1, "Common Normal") .. {
 	Name = "ValidateInvalidateScoreButton",
 	InitCommand = function(self)
-		self:xy(frameWidth - offsetX - frameX, frameHeight - headeroffY - 91 - offsetY):zoom(0.425):halign(1):settext("")
+		self:xy(frameWidth - offsetX * 2 - 10, frameHeight - headeroffY - 91 - offsetY):zoom(0.425):halign(1):settext("")
 		self:diffuse(getMainColor("positive"))
 	end,
 	DisplayCommand = function(self)
@@ -986,7 +1005,7 @@ local function nestedTabButton(i)
 		end,
 		UIElements.TextToolTip(1, 1, "Common Normal") .. {
 			InitCommand = function(self)
-				self:diffuse(getMainColor("positive")):maxwidth(nestedTabButtonWidth - 80):maxheight(40):zoom(0.65)
+				self:diffuse(COLOR.TextMain):maxwidth(nestedTabButtonWidth - 80):maxheight(40):zoom(0.65)
 				self:settext(nestedTabs[i])
 				self:halign(0):valign(1)
 				self.hoverDiffusefunction = function(self)
@@ -996,15 +1015,15 @@ local function nestedTabButton(i)
 					local inTabHovered = 0.6
 					if isOver(self) then
 						if nestedTab == i then
-							self:diffusealpha(inTabHovered)
+							self:diffuse(COLOR.TextMain):diffusealpha(inTabHovered)
 						else
-							self:diffusealpha(offTabHovered)
+							self:diffuse(COLOR.TextSub2):diffusealpha(offTabHovered)
 						end
 					else
 						if nestedTab == i then
-							self:diffusealpha(inTabNotHovered)
+							self:diffuse(COLOR.TextMain):diffusealpha(inTabNotHovered)
 						else
-							self:diffusealpha(offTabNotHovered)
+							self:diffuse(COLOR.TextSub2):diffusealpha(offTabNotHovered)
 						end
 					end
 				end

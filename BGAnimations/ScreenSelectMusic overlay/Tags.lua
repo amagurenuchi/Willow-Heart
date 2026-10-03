@@ -1,24 +1,23 @@
-
 local hoverAlpha = 0.6
 
 local onTab = false
 local song
 local steps
 local curInput = ""
-local frameX = SCREEN_WIDTH - capWideScale(360, 400) - 10
-local frameY = 45
 local frameWidth = capWideScale(360, 400)
-local frameHeight = 350
+local frameX = SCREEN_WIDTH - frameWidth - 10
+local frameY = 95
+local frameHeight = SCREEN_HEIGHT - 135
 local fontScale = 0.4
 local tagsperpage = 14
 local offsetX = 10
-local offsetY = 20
+local offsetY = 24
 local tagFunction = 1
 local buttondiffuse = 0
 local buttonheight = 10
 local currenttagpage = 1
 local numtagpages = 1
-local tagYSpacing = 33
+local tagYSpacing = 24
 local whee
 local filterChanged = false
 local ptags = tags:get_data().playerTags
@@ -89,14 +88,14 @@ local t = Def.ActorFrame {
 		self:queuecommand("BORPBORPNORFNORFc"):visible(false)
 	end,
 	OffCommand = function(self)
-		self:bouncebegin(0.2):xy(-500, 0):diffusealpha(0)
+		self:decelerate(0.6):xy(SCREEN_WIDTH + 500, frameY):diffusealpha(0)
 		self:sleep(0.04):queuecommand("Invis")
 	end,
 	InvisCommand= function(self)
 		self:visible(false)
 	end,
 	OnCommand = function(self)
-		self:bouncebegin(0.2):xy(0, 0):diffusealpha(1)
+		self:xy(SCREEN_WIDTH + 500, frameY):decelerate(0.6):xy(frameX, frameY):diffusealpha(1)
 	end,
 	MouseRightClickMessageCommand = function(self)
 		if onTab then
@@ -131,22 +130,35 @@ local t = Def.ActorFrame {
 	end,
 }
 
+-- Salmon offset backdrop shadow
 t[#t + 1] = Def.Quad {
 	InitCommand = function(self)
-		self:xy(frameX, frameY):zoomto(frameWidth, frameHeight):halign(0):valign(0):diffuse(getMainColor("tabs"))
+		self:xy(5, 5):zoomto(frameWidth, frameHeight):halign(0):valign(0):diffuse(COLOR.MainHighlight)
 	end
 }
+-- White card background
 t[#t + 1] = Def.Quad {
 	InitCommand = function(self)
-		self:xy(frameX, frameY):zoomto(frameWidth, offsetY):halign(0):valign(0)
-		self:diffuse(getMainColor("frames")):diffusealpha(0.5)
+		self:xy(0, 0):zoomto(frameWidth, frameHeight):halign(0):valign(0):diffuse(COLOR.MainBackground)
 	end
 }
+-- Border outline
+t[#t + 1] = UIElements.Border(frameWidth, frameHeight, 1) .. {
+	InitCommand = function(self)
+		self:xy(frameWidth / 2, frameHeight / 2):diffuse(COLOR.MainBorder)
+	end
+}
+-- Header quad
+t[#t + 1] = Def.Quad {
+	InitCommand = function(self)
+		self:xy(0, 0):zoomto(frameWidth, offsetY):halign(0):valign(0):diffuse(COLOR.MainHighlight)
+	end
+}
+-- Header title
 t[#t + 1] = LoadFont("Common Normal") .. {
 	InitCommand = function(self)
-		self:xy(frameX + 5, frameY + offsetY - 11.5):zoom(0.65):halign(0)
+		self:xy(10, offsetY / 2):zoom(0.55):halign(0):valign(0.5):diffuse(COLOR.TextMain)
 		self:settext(translated_info["Title"])
-		self:diffuse(Saturation(getMainColor("positive"), 0.1))
 	end
 }
 
@@ -164,107 +176,16 @@ local r = Def.ActorFrame {
 		if filterTags == nil then
 			filterTags = {}
 		end
+
 		if filterAgainstTags == nil then
 			filterAgainstTags = {}
 		end
-		-- apparently i cant just do if charts and next(charts) to check nil charts
-		if (charts ~= nil and #charts ~= 0) or (oCharts ~= nil and #oCharts ~= 0) then
-			-- not sure why the other song doesnt work i hate this
-			local ssong = GAMESTATE:GetCurrentSong()
-			whee:FilterByAndAgainstStepKeys(charts, oCharts)
-			whee:SelectSong(ssong)
-		end
-
+		self:queuecommand("RefreshTags")
 	end,
 	RefreshTagsMessageCommand = function(self)
-		if filterMode == nil then
-			filterMode = true
-		end
-		if filterAgainstMode == nil then
-			filterAgainstMode = false
-		end
-		ptags = tags:get_data().playerTags
-		-- filtering
-		if filterChanged then
-			charts = {}
-			oCharts = {}
-
-			if next(filterTags) then
-				-- MODE == AND in menu, requires all tags to be active
-				if filterMode then
-					local toFilterTags = {}
-					for tag, v in pairs(filterTags) do
-						toFilterTags[#toFilterTags + 1] = tag
-					end
-
-					local inCharts = {}
-					-- Gather initial first tags chart keys
-					for chartKey, v in pairs(ptags[toFilterTags[1]]) do
-						inCharts[#inCharts + 1] = chartKey
-					end
-					-- Subtract all the charts that dont have the additional keys
-					for i = 2, #toFilterTags do
-						for k, chartKey in pairs(inCharts) do
-							if ptags[toFilterTags[i]][chartKey] == nil then
-								inCharts[k] = nil
-							end
-						end
-					end
-					for k, chartKey in pairs(inCharts) do
-						charts[#charts + 1] = chartKey
-					end
-				-- MODE == OR in menu, requires only one tag to be active
-				else
-					-- Just collect everything that has the filter tag
-					for tag, v in pairs(filterTags) do
-						for chartKey, v in pairs(ptags[tag]) do
-							charts[#charts + 1] = chartKey
-						end
-					end
-				end
-			end
-			if next(filterAgainstTags) then
-				-- MODE == AND in menu, requires all tags to be active
-				if filterAgainstMode then
-					local toFilterAgainstTags = {}
-					for tag, v in pairs(filterAgainstTags) do
-						toFilterAgainstTags[#toFilterAgainstTags + 1] = tag
-					end
-
-					local outCharts = {}
-					-- Gather initial first tags chart keys
-					for chartKey, v in pairs(ptags[toFilterAgainstTags[1]]) do
-						outCharts[#outCharts + 1] = chartKey
-					end
-					-- Subtract all the oCharts that dont have the additional keys
-					for i = 2, #toFilterAgainstTags do
-						for k, chartKey in pairs(outCharts) do
-							if ptags[toFilterAgainstTags[i]][chartKey] == nil then
-								outCharts[k] = nil
-							end
-						end
-					end
-					for k, chartKey in pairs(outCharts) do
-						oCharts[#oCharts + 1] = chartKey
-					end
-				-- MODE == OR in menu, requires only one tag to be active
-				else
-					-- Just collect everything that has the filter tag
-					for tag, v in pairs(filterAgainstTags) do
-						for chartKey, v in pairs(ptags[tag]) do
-							oCharts[#oCharts + 1] = chartKey
-						end
-					end
-				end
-			end
-			local ssong = GAMESTATE:GetCurrentSong()
-			whee:FilterByAndAgainstStepKeys(charts, oCharts)
-			whee:SelectSong(ssong)
-			filterChanged = false
-		end
-
-
 		playertags = {}
+		ptags = tags:get_data().playerTags
+
 		for k, v in pairs(ptags) do
 			playertags[#playertags + 1] = k
 		end
@@ -278,9 +199,9 @@ local r = Def.ActorFrame {
 local function makeTag(i)
 	local t = Def.ActorFrame {
 		InitCommand = function(self)
-			local colPos = i / 8 >= 1 and 20 + (frameWidth / 2) or offsetX + 10
-			local row = i > 7 and i - 8 or i - 1
-			self:xy(colPos, offsetY + 95 + row * tagYSpacing)
+			local colPos = i > 7 and (frameWidth / 2 + 10) or 10
+			local row = i > 7 and (i - 8) or (i - 1)
+			self:xy(colPos, offsetY + 35 + row * tagYSpacing)
 			self:visible(true)
 		end,
 		UpdateTagsMessageCommand = function(self)
@@ -292,30 +213,30 @@ local function makeTag(i)
 		end,
 		Def.ActorFrame {
 			InitCommand = function(self)
-				self:x(5)
+				self:x(0)
 			end,
 			UIElements.QuadButton(1, 1) .. {
 				InitCommand = function(self)
-					self:xy(-6, 20):zoomto(frameWidth / 2 - 20, tagYSpacing - 2):halign(0):valign(1)
+					self:xy(0, 0):zoomto(frameWidth / 2 - 20, tagYSpacing - 4):halign(0):valign(0)
 				end,
 				UpdateTagsMessageCommand = function(self)
 					curTag = playertags[i + ((currenttagpage - 1) * tagsperpage)]
 					if tagFunction == 1 then
-						if song and curTag and ptags[curTag][steps:GetChartKey()] then
-							self:diffuse(getMainColor("positive"))
+						if song and curTag and ptags[curTag] and steps and ptags[curTag][steps:GetChartKey()] then
+							self:diffuse(COLOR.MainHighlight)
 						else
-							self:diffuse(getMainColor("frames")):diffusealpha(0.35)
+							self:diffuse(color("#E5E5E5"))
 						end
 					elseif tagFunction == 2 then
 						if filterTags[curTag] then
-							self:diffuse(getMainColor("positive"))
+							self:diffuse(COLOR.MainHighlight)
 						elseif filterAgainstTags[curTag] then
-							self:diffuse(getMainColor("negative"))
+							self:diffuse(color("#FF6666"))
 						else
-							self:diffuse(getMainColor("frames")):diffusealpha(0.35)
+							self:diffuse(color("#E5E5E5"))
 						end
 					else
-						self:diffuse(getMainColor("frames")):diffusealpha(0.35)
+						self:diffuse(color("#E5E5E5"))
 					end
 				end,
 				MouseDownCommand = function(self, params)
@@ -376,10 +297,10 @@ local function makeTag(i)
 					self:GetParent():diffusealpha(1)
 				end,
 			},
-			LoadFont("Common Large") .. {
+			LoadFont("Common Normal") .. {
 				Name = "Text",
 				InitCommand = function(self)
-					self:y(5):halign(0):maxwidth(frameWidth + 25)
+					self:xy(5, (tagYSpacing - 4) / 2):halign(0):valign(0.5):maxwidth((frameWidth / 2 - 30) / fontScale):diffuse(COLOR.TextMain)
 				end,
 				UpdateTagsMessageCommand = function(self)
 					self:zoom(fontScale)
@@ -399,21 +320,22 @@ local fawa = {
 	THEME:GetString("TabTags", "TagDelete")
 }
 local function funcButton(i)
+	local btnWidth = (frameWidth - 30) / 3
 	local t = Def.ActorFrame {
 		InitCommand = function(self)
-			local colPos = (i - 1) * (frameWidth / 3 - 5) + 80
-			self:xy(colPos, frameY + capWideScale(80, 80) - 55)
+			local colPos = 10 + (i - 1) * (btnWidth + 5)
+			self:xy(colPos, offsetY + 6)
 			self:visible(true)
 		end,
 		UIElements.QuadButton(1, 1) .. {
 			InitCommand = function(self)
-				self:zoomto((frameWidth / 3 - 10), 30):halign(0.5):valign(0):diffuse(getMainColor("frames")):diffusealpha(0.35)
+				self:zoomto(btnWidth, 22):halign(0):valign(0):diffuse(color("#DDDDDD"))
 			end,
 			BORPBORPNORFNORFcCommand = function(self)
 				if tagFunction == i then
-					self:diffusealpha(1)
+					self:diffuse(COLOR.MainHighlight)
 				else
-					self:diffusealpha(0.35)
+					self:diffuse(color("#DDDDDD"))
 				end
 			end,
 			MouseDownCommand = function(self, params)
@@ -426,15 +348,15 @@ local function funcButton(i)
 				self:queuecommand("BORPBORPNORFNORFc")
 			end,
 			MouseOverCommand = function(self)
-				self:GetParent():diffusealpha(0.6)
+				self:diffusealpha(0.6)
 			end,
 			MouseOutCommand = function(self)
-				self:GetParent():diffusealpha(1)
+				self:diffusealpha(1)
 			end,
 		},
-		LoadFont("Common Large") .. {
+		LoadFont("Common Normal") .. {
 			InitCommand = function(self)
-				self:y(12):halign(0.5):diffuse(getMainColor("positive")):maxwidth((frameWidth / 3 - 30)):maxheight(22)
+				self:xy(btnWidth / 2, 11):halign(0.5):valign(0.5):diffuse(COLOR.TextMain):maxwidth(btnWidth - 10):zoom(0.35)
 			end,
 			BeginCommand = function(self)
 				self:settext(fawa[i])
@@ -447,7 +369,7 @@ end
 -- new tag input
 r[#r + 1] = Def.ActorFrame {
 	InitCommand = function(self)
-		self:xy(frameX + 10, frameY + capWideScale(80, 80) + 225)
+		self:xy(10, frameHeight - 65)
 	end,
 	BORPBORPNORFNORFcCommand = function(self)
 		self:visible(tagFunction == 1)
@@ -455,9 +377,9 @@ r[#r + 1] = Def.ActorFrame {
 	UpdateTagsMessageCommand = function(self)
 		self:queuecommand("BORPBORPNORFNORFc")
 	end,
-	LoadFont("Common Large") .. {
+	LoadFont("Common Normal") .. {
 		InitCommand = function(self)
-			self:halign(0):zoom(fontScale)
+			self:halign(0):zoom(fontScale):diffuse(COLOR.TextMain)
 		end,
 		BORPBORPNORFNORFcCommand = function(self)
 			self:settextf("%s:", translated_info["AddTag"])
@@ -465,7 +387,7 @@ r[#r + 1] = Def.ActorFrame {
 	},
 	UIElements.QuadButton(1, 1) .. {
 		InitCommand = function(self)
-			self:addx(129):addy(3):zoomto(capWideScale(210,250), 21):halign(0):diffuse(color("#666666"))
+			self:addx(80):addy(0):zoomto(capWideScale(210,240), 20):halign(0):valign(0):diffuse(color("#E5E5E5"))
 		end,
 		MouseDownCommand = function(self, params)
 			if params.event == "DeviceButton_left mouse button" and onTab then
@@ -479,25 +401,25 @@ r[#r + 1] = Def.ActorFrame {
 		end,
 		BORPBORPNORFNORFcCommand = function(self)
 			if hasFocus then
-				self:diffuse(color("#999999"))
+				self:diffuse(COLOR.MainHighlight)
 			else
-				self:diffuse(color("#000000"))
+				self:diffuse(color("#E5E5E5"))
 			end
 		end,
 		UpdateTagsMessageCommand = function(self)
 			self:queuecommand("BORPBORPNORFNORFc")
 		end
 	},
-	LoadFont("Common Large") .. {
+	LoadFont("Common Normal") .. {
 		InitCommand = function(self)
-			self:addx(133):addy(2):halign(0):maxwidth(600):zoom(fontScale - 0.05)
+			self:addx(85):addy(10):halign(0):valign(0.5):maxwidth(400):zoom(fontScale - 0.05):diffuse(COLOR.TextMain)
 		end,
 		BORPBORPNORFNORFcCommand = function(self)
 			self:settext(curInput)
 			if curInput ~= "" or hasFocus then
-				self:diffuse(color("#FFFFFF"))
+				self:diffuse(COLOR.TextMain)
 			else
-				self:diffuse(color("#666666"))
+				self:diffuse(COLOR.TextSub2)
 			end
 		end,
 		UpdateTagsMessageCommand = function(self)
@@ -509,7 +431,7 @@ r[#r + 1] = Def.ActorFrame {
 -- filter type
 r[#r + 1] = Def.ActorFrame {
 	InitCommand = function(self)
-		self:xy(frameX + 10, frameY + capWideScale(80, 80) + 225)
+		self:xy(10, frameHeight - 65)
 	end,
 	BORPBORPNORFNORFcCommand = function(self)
 		self:visible(tagFunction == 2)
@@ -517,10 +439,9 @@ r[#r + 1] = Def.ActorFrame {
 	UpdateTagsMessageCommand = function(self)
 		self:queuecommand("BORPBORPNORFNORFc")
 	end,
-	UIElements.TextToolTip(1, 1, "Common Large") .. {
+	UIElements.TextToolTip(1, 1, "Common Normal") .. {
 		InitCommand = function(self)
-			self:zoom(fontScale):halign(0)
-			self:diffuse(getMainColor("positive"))
+			self:zoom(fontScale):halign(0):diffuse(COLOR.TextMain)
 		end,
 		BORPBORPNORFNORFcCommand = function(self)
 			self:settextf("%s: %s", translated_info["Mode"], (filterMode and translated_info["AND"] or translated_info["OR"])):maxwidth(((frameWidth - 40) / 2) / fontScale)
@@ -552,8 +473,7 @@ r[#r + 1] = Def.ActorFrame {
 -- filter against type
 r[#r + 1] = Def.ActorFrame {
 	InitCommand = function(self)
-		-- Is inverse of frameX + 10, makes it start at exactly half way + 10px each side padding
-		self:xy(frameX + ((frameWidth - 40) / 2) + 30, frameY + capWideScale(80, 80) + 225)
+		self:xy(frameWidth / 2 + 10, frameHeight - 65)
 	end,
 	BORPBORPNORFNORFcCommand = function(self)
 		self:visible(tagFunction == 2)
@@ -561,10 +481,9 @@ r[#r + 1] = Def.ActorFrame {
 	UpdateTagsMessageCommand = function(self)
 		self:queuecommand("BORPBORPNORFNORFc")
 	end,
-	UIElements.TextToolTip(1, 1, "Common Large") .. {
+	UIElements.TextToolTip(1, 1, "Common Normal") .. {
 		InitCommand = function(self)
-			self:zoom(fontScale):halign(0)
-			self:diffuse(getMainColor("positive"))
+			self:zoom(fontScale):halign(0):diffuse(COLOR.TextMain)
 		end,
 		BORPBORPNORFNORFcCommand = function(self)
 			self:settextf("%s: %s", translated_info["ExcludeMode"], (filterAgainstMode and translated_info["AND"] or translated_info["OR"])):maxwidth(((frameWidth - 40) / 2) / fontScale)
@@ -593,12 +512,11 @@ r[#r + 1] = Def.ActorFrame {
 	}
 }
 
-r[#r+1] = LoadFont("Common Large") .. {
+r[#r+1] = LoadFont("Common Normal") .. {
 	InitCommand = function(self)
-		self:xy(frameX + frameWidth/2, frameY + capWideScale(80, 80) + 225)
-		self:zoom(0.45)
+		self:xy(frameWidth / 2, frameHeight - 65)
+		self:zoom(0.35):halign(0.5):diffuse(COLOR.TextSub1)
 		self:settextf("%s", translated_info["HowToDelete"])
-		-- self:diffuse(getMainColor("positive"))
 		self:visible(false)
 	end,
 	UpdateTagsMessageCommand = function(self)
@@ -612,14 +530,14 @@ r[#r+1] = LoadFont("Common Large") .. {
 	end,
 }
 
--- main quad with paginator i guess?
+-- Paginator & Page info
 r[#r + 1] = Def.ActorFrame {
 	InitCommand = function(self)
-		self:xy(frameX + 28, frameY + capWideScale(80, 80) + 253)
+		self:xy(10, frameHeight - 30)
 	end,
-	UIElements.TextToolTip(1, 1, "Common Large") .. {
+	UIElements.TextToolTip(1, 1, "Common Normal") .. {
 		InitCommand = function(self)
-			self:halign(0):zoom(0.3):diffuse(getMainColor("positive")):settext(translated_info["Previous"])
+			self:halign(0):zoom(0.35):diffuse(COLOR.TextMain):settext(translated_info["Previous"])
 		end,
 		MouseDownCommand = function(self, params)
 			if params.event == "DeviceButton_left mouse button" and currenttagpage > 1 then
@@ -628,9 +546,9 @@ r[#r + 1] = Def.ActorFrame {
 			end
 		end
 	},
-	UIElements.TextToolTip(1, 1, "Common Large") .. {
+	UIElements.TextToolTip(1, 1, "Common Normal") .. {
 		InitCommand = function(self)
-			self:x(capWideScale(270,300)):halign(0):zoom(0.3):diffuse(getMainColor("positive")):settext(translated_info["Next"])
+			self:x(frameWidth - 60):halign(0):zoom(0.35):diffuse(COLOR.TextMain):settext(translated_info["Next"])
 		end,
 		MouseDownCommand = function(self, params)
 			if params.event == "DeviceButton_left mouse button" and currenttagpage < numtagpages then
@@ -639,9 +557,9 @@ r[#r + 1] = Def.ActorFrame {
 			end
 		end
 	},
-	LoadFont("Common Large") .. {
+	LoadFont("Common Normal") .. {
 		InitCommand = function(self)
-			self:x(capWideScale(160,175)):halign(0.5):zoom(0.3)
+			self:x((frameWidth - 20) / 2):halign(0.5):zoom(0.35):diffuse(COLOR.TextMain)
 		end,
 		BORPBORPNORFNORFcCommand = function(self)
 			self:settextf(

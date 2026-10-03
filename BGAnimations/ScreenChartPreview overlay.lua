@@ -2,26 +2,6 @@ local pn = PLAYER_1
 local song = GAMESTATE:GetCurrentSong()
 local steps = GAMESTATE:GetCurrentSteps(pn)
 
-local function GetDifficultyName(diff)
-	if not diff then return "NORMAL" end
-	local str = ToEnumShortString(diff)
-	if str == "Beginner" then return "BEGINNER"
-	elseif str == "Easy" then return "EASY"
-	elseif str == "Medium" then return "NORMAL"
-	elseif str == "Hard" then return "HARD"
-	elseif str == "Challenge" then return "INSANE"
-	elseif str == "Edit" then return "EDIT"
-	else return string.upper(str) end
-end
-
-local function DifficultyColor(diff)
-	local colors = {
-		Beginner = "#66CCFF", Easy = "#66DD88", Medium = "#FFDD66",
-		Hard = "#FF9966", Challenge = "#FF6699", Edit = "#CC99FF"
-	}
-	return color(colors[ToEnumShortString(diff)] or "#AAB3C4")
-end
-
 local function StepsForSong(song)
 	if not song then return {} end
 	if song.GetChartsMatchingFilter then return song:GetChartsMatchingFilter() or {} end
@@ -380,7 +360,7 @@ for i = 1, 6 do
 				local chart = chartList[i]
 				if chart then
 					self:visible(true)
-					self:diffuse(DifficultyColor(chart:GetDifficulty()))
+					self:diffuse(GetDifficultyColor(chart:GetDifficulty()))
 					self:diffusealpha(chart == steps and 0.38 or 0.12)
 				else
 					self:visible(false)
@@ -401,7 +381,7 @@ for i = 1, 6 do
 				local chartList = StepsForSong(song)
 				local chart = chartList[i]
 				if chart then
-					self:settext(GetDifficultyName(chart:GetDifficulty()))
+					self:settext(GetDifficultyLabel(chart:GetDifficulty()))
 					self:diffuse(chart == steps and COLOR.MainHighlight or COLOR.TextMain)
 				else
 					self:settext("")
@@ -423,7 +403,7 @@ for i = 1, 6 do
 				if chart then
 					local rate = getMusicRate()
 					self:settextf("MSD %.2f", OverallMSD(chart, rate))
-					self:diffuse(DifficultyColor(chart:GetDifficulty()))
+					self:diffuse(GetDifficultyColor(chart:GetDifficulty()))
 				else
 					self:settext("")
 				end

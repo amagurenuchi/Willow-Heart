@@ -7,7 +7,7 @@ local currentCountry = "Global"
 local numscores = 13
 local ind = 0
 local offx = 5
-local width = SCREEN_WIDTH * 0.56
+local width = capWideScale(360, 400)
 local dwidth = width - offx * 2
 local height = (numscores + 2) * packspaceY - packspaceY / 3 -- account dumbly for header being moved up
 
@@ -159,7 +159,7 @@ local o = Def.ActorFrame {
 		numscores = 13
 		ind = 0
 		offx = 5
-		width = SCREEN_WIDTH * 0.56
+		width = capWideScale(360, 400)
 		dwidth = width - offx * 2
 		height = (numscores + 2) * packspaceY - packspaceY / 3
 
@@ -177,6 +177,11 @@ local o = Def.ActorFrame {
 		FILTERMAN:HelpImTrappedInAChineseFortuneCodingFactory(false)
 		self:playcommand("Init")
 	end,
+	Def.Quad {
+		InitCommand = function(self)
+			self:xy(5, 5):zoomto(width, height - headeroff):halign(0):valign(0):diffuse(COLOR.MainHighlight)
+		end
+	},
 	UIElements.QuadButton(1, 1) .. {-- this is a nonfunctional button to mask buttons behind the window
 		Name = "FrameDisplay",
 		InitCommand = function(self)

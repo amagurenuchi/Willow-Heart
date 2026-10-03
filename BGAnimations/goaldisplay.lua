@@ -6,7 +6,7 @@ local packspaceY = pdh + ygap
 local numgoals = 12
 local ind = 0
 local offx = 5
-local width = SCREEN_WIDTH * 0.56
+local width = capWideScale(360, 400)
 local dwidth = width - offx * 2
 local height = (numgoals + 2) * packspaceY
 
@@ -66,7 +66,9 @@ local translated_info = {
 	Vacuous = THEME:GetString("TabGoals", "VacuousGoal"),
 }
 
-local goaltable
+-- Child actors can receive UpdateCommand before GoalTableRefreshCommand has
+-- populated the table (notably during screen startup).
+local goaltable = {}
 local o = Def.ActorFrame {
 	Name = "GoalDisplay",
 	InitCommand = function(self)
@@ -81,7 +83,7 @@ local o = Def.ActorFrame {
 		self:queuecommand("GoalTableRefresh")
 	end,
 	GoalTableRefreshMessageCommand = function(self)
-		goaltable = GetPlayerOrMachineProfile(PLAYER_1):GetGoalTable()
+		goaltable = GetPlayerOrMachineProfile(PLAYER_1):GetGoalTable() or {}
 		ind = 0
 		self:queuecommand("Update")
 	end,
@@ -108,9 +110,19 @@ local o = Def.ActorFrame {
 		self:queuecommand("Update")
 	end,
 	Def.Quad {
+		InitCommand = function(self)
+			self:xy(5, 5):zoomto(width, height - headeroff):halign(0):valign(0):diffuse(COLOR.MainHighlight)
+		end
+	},
+	Def.Quad {
 		Name = "FrameDisplay",
 		InitCommand = function(self)
 			self:zoomto(width, height - headeroff):halign(0):valign(0):diffuse(getMainColor("tabs"))
+		end
+	},
+	UIElements.Border(width, height - headeroff, 1) .. {
+		InitCommand = function(self)
+			self:xy(width / 2, (height - headeroff) / 2):diffuse(COLOR.MainBorder)
 		end
 	},
 	-- headers
@@ -273,6 +285,10 @@ local function makeGoalDisplay(i)
 			self:y(packspaceY * i + headeroff)
 		end,
 		UpdateCommand = function(self)
+			if not goaltable then
+				self:visible(false)
+				return
+			end
 			sg = goaltable[(i + ind)]
 			if sg then
 				ck = sg:GetChartKey()

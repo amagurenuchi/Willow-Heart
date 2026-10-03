@@ -1,30 +1,29 @@
 
 PLAYER = PLAYER_1
 
-GRADE_LABELS = {
-	Grade_Tier01 = "AAAAA", Grade_Tier02 = "AAAA:", Grade_Tier03 = "AAAA.", Grade_Tier04 = "AAAA",
-	Grade_Tier05 = "AAA:", Grade_Tier06 = "AAA.", Grade_Tier07 = "AAA",
-	Grade_Tier08 = "AA:", Grade_Tier09 = "AA.", Grade_Tier10 = "AA",
-	Grade_Tier11 = "A:", Grade_Tier12 = "A.", Grade_Tier13 = "A",
-	Grade_Tier14 = "B", Grade_Tier15 = "C", Grade_Tier16 = "D",
-	Grade_Failed = "F", Grade_None = "-",
+DIFFICULTY_LABELS = {
+	Beginner = "BEGINNER",
+	Easy = "EASY",
+	Medium = "NORMAL",
+	Hard = "HARD",
+	Challenge = "INSANE",
+	Edit = "EDIT",
 }
 
-function GetGradeString(grade)
-	if not grade then return "N/A" end
-	return GRADE_LABELS[tostring(grade)] or "CLEARED"
+function GetDifficultyName(diff)
+	if not diff then return "" end
+	local str = ToEnumShortString(diff)
+	return DIFFICULTY_LABELS[str] or string.upper(str)
 end
 
-function GetDifficultyName(diff)
-	if not diff then return "NORMAL" end
-	local str = ToEnumShortString(diff)
-	if str == "Beginner" then return "BEGINNER"
-	elseif str == "Easy" then return "EASY"
-	elseif str == "Medium" then return "NORMAL"
-	elseif str == "Hard" then return "HARD"
-	elseif str == "Challenge" then return "INSANE"
-	elseif str == "Edit" then return "EDIT"
-	else return string.upper(str) end
+function GetDifficultyLabel(diff)
+	return GetDifficultyName(diff)
+end
+
+-- Keep the shared color API available on screens that load before Colors.lua.
+function GetJudgementColor(judgement)
+	local colors = COLOR and COLOR.JudgementColors
+	return color(colors and colors[tostring(judgement)] or "#4C4C4C")
 end
 
 function Actor.PlayCommandsOnChildren(self, cmd, params)

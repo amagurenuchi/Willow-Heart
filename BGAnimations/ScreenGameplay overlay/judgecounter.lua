@@ -25,12 +25,14 @@ local function resetCounts()
 	for _, judgment in ipairs(judgmentOrder) do counts[judgment] = 0 end
 end
 
-local function updateCounts(self)
+local function updateCounts(self, latestJudgment)
 	local stage = STATSMAN:GetCurStageStats()
 	local stats = stage and stage:GetPlayerStageStats(player)
 	if not stats or not stats.GetTapNoteScores then return end
 	for _, judgment in ipairs(judgmentOrder) do
 		counts[judgment] = tonumber(stats:GetTapNoteScores(judgment)) or counts[judgment]
+		-- JudgmentMessageCommand fires before the stage stats include the tap.
+		if judgment == latestJudgment then counts[judgment] = counts[judgment] + 1 end
 		self:GetChild(judgment):settext(tostring(counts[judgment]))
 	end
 end
@@ -46,7 +48,7 @@ local t = Def.ActorFrame {
 	end,
 	JudgmentMessageCommand = function(self, params)
 		if not params or params.Player ~= player then return end
-		updateCounts(self)
+		updateCounts(self, params.TapNoteScore)
 	end,
 	PracticeModeResetMessageCommand = function(self)
 		resetCounts()

@@ -66,6 +66,10 @@ local function updateCombo(self, params)
 		return
 	end
 	local value = comboValue(params)
+	-- The judgment message is emitted before CurrentCombo is updated.
+	if tapScore == "TapNoteScore_W1" or tapScore == "TapNoteScore_W2" or tapScore == "TapNoteScore_W3" then
+		value = value + 1
+	end
 	self:stoptweening()
 	if value <= 0 then
 		self:settext(""):diffusealpha(0)
@@ -159,6 +163,10 @@ local classicCombo = Def.ActorFrame{
 	end,
 	UpdateComboCommand = function(self, params)
 		local value = comboValue(params)
+		local tapScore = params and scoreName(params.TapNoteScore)
+		if tapScore == "TapNoteScore_W1" or tapScore == "TapNoteScore_W2" or tapScore == "TapNoteScore_W3" then
+			value = value + 1
+		end
 		local number = self:GetChild("Number")
 		local label = self:GetChild("Label")
 		if value <= 0 then
@@ -225,7 +233,7 @@ local wife = Def.ActorFrame{
 	LoadFont("hatsukoifriendsmini 24px") .. {
 		Name = "Average",
 		InitCommand = function(self)
-			self:xy(24, SCREEN_HEIGHT - 66):halign(0):valign(1):diffuse(color("#FFFFFF")):settext("0.00%")
+			self:xy(SCREEN_CENTER_X, SCREEN_CENTER_Y):halign(0.5):valign(0.5):diffuse(color("#FFFFFF")):settext("0.00%")
 		end,
 		UpdateCommand = function(self)
 			updateAverage(self)
@@ -241,6 +249,11 @@ local wife = Def.ActorFrame{
 		end,
 	},
 }
+
+wife.BeginCommand = function(self)
+	self:GetChild("Average"):settext("0.00%")
+	self:GetChild("Accumulated"):settext("0.00%")
+end
 
 return Def.ActorFrame{
 	-- Keep the stage-information handoff, but consume it when gameplay was

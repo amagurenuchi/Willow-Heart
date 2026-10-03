@@ -100,7 +100,7 @@ local judgment = LoadFont("DFPGothic 64px") .. {
 		hideFallbackJudgment()
 		lastTapNoteScore = scoreName(params.TapNoteScore)
 		local text = judgmentText(params.TapNoteScore)
-		self:stoptweening():settext(text):diffuse(GetJudgementColor(lastTapNoteScore))
+		self:stoptweening():settext(text):diffuse(color("#FFFFFF"))
 		if text == "" then
 			self:diffusealpha(0)
 		else

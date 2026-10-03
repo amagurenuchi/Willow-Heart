@@ -25,6 +25,21 @@ local function currentCombo()
 	return s and s.GetCurrentCombo and (tonumber(s:GetCurrentCombo()) or 0) or 0
 end
 
+local function maxCombo()
+	local steps = GAMESTATE:GetCurrentSteps(player)
+	if not steps then return 0 end
+	local radar = steps:GetRadarValues(player)
+	return radar and tonumber(radar:GetValue("RadarCategory_TapsAndHolds")) or 0
+end
+
+local function isFCOrHigher()
+	local s = stats()
+	if not s or not s.GetTapNoteScores then return false end
+	return (tonumber(s:GetTapNoteScores("TapNoteScore_W4")) or 0) == 0
+		and (tonumber(s:GetTapNoteScores("TapNoteScore_W5")) or 0) == 0
+		and (tonumber(s:GetTapNoteScores("TapNoteScore_Miss")) or 0) == 0
+end
+
 local function hideFallbackJudgment()
 	local screen = SCREENMAN:GetTopScreen()
 	local playerActor = screen and screen:GetChild("PlayerP1")
@@ -90,6 +105,25 @@ local combo = LoadFont("multicolore  64px") .. {
 		if not params or params.Player ~= player then return end
 		hideFallbackJudgment()
 		updateCombo(self, params)
+	end,
+}
+
+local comboProgress = Def.Quad {
+	Name = "ComboProgress",
+	InitCommand = function(self)
+		self:xy(SCREEN_CENTER_X - 10, SCREEN_CENTER_Y - 106)
+			:halign(0.5):valign(0.5):zoomto(100, 2):visible(false):diffuse(color("#66CC66"))
+	end,
+	JudgmentMessageCommand = function(self, params)
+		if displayMode ~= "Minimal" or not params or params.Player ~= player then return end
+		local value = comboValue(params)
+		local tapScore = scoreName(params.TapNoteScore)
+		if tapScore == "TapNoteScore_W1" or tapScore == "TapNoteScore_W2" or tapScore == "TapNoteScore_W3" then
+			value = value + 1
+		end
+		local maximum = maxCombo()
+		local stillFC = tapScore ~= "TapNoteScore_W4" and tapScore ~= "TapNoteScore_W5" and tapScore ~= "TapNoteScore_Miss"
+		self:visible(stillFC and isFCOrHigher() and maximum > 0 and value > maximum * 0.25)
 	end,
 }
 
@@ -272,6 +306,7 @@ return Def.ActorFrame{
 		end
 	end,
 	combo,
+	comboProgress,
 	judgment,
 	classicJudgment,
 	classicCombo,

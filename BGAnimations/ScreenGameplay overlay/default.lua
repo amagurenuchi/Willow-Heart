@@ -253,8 +253,9 @@ local function updateAverage(self)
 	if s.GetCurWifeScore and s.GetMaxWifeScore then
 		local max = tonumber(s:GetMaxWifeScore()) or 0
 		if max <= 0 then self:settext("") return end
-		self:settextf("%.4f%%", (s:GetCurWifeScore() / max) * 100)
-		if s.GetWifeGrade then self:diffuse(getGradeColor(s:GetWifeGrade())) end
+		local percent = (s:GetCurWifeScore() / max) * 100
+		self:settextf("%.4f%%", percent)
+		self:diffuse(getGradeColor(GetGradeForPercent(percent)))
 	else
 		self:settext("")
 	end

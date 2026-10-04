@@ -774,7 +774,7 @@ l[#l + 1] = UIElements.TextToolTip(1, 1, "Common Normal") .. {
 	MouseDownCommand = function(self, params)
 		if nestedTab == 1 and params.event == "DeviceButton_left mouse button" then
 			if getTabIndex() == 2 and getScoreForPlot() and hasReplayData and isOver(self) then
-				SCREENMAN:GetTopScreen():PlayReplay(score)
+				WillowPlayReplay(score)
 			end
 		end
 	end

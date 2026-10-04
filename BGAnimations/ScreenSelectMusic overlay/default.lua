@@ -337,7 +337,7 @@ local function panelAction(index)
 		local scores = currentScores()
 		if index == 1 then scoreIndex = scoreIndex % math.max(1, #scores) + 1; MESSAGEMAN:Broadcast("TabRefresh")
 		elseif index == 2 and song and steps and DLMAN and DLMAN.IsLoggedIn and DLMAN:IsLoggedIn() then DLMAN:UploadScoresForChart(steps:GetChartKey())
-		elseif index == 3 and scores[scoreIndex] and scores[scoreIndex].HasReplayData and scores[scoreIndex]:HasReplayData() then SCREENMAN:GetTopScreen():PlayReplay(scores[scoreIndex]) end
+		elseif index == 3 and scores[scoreIndex] and scores[scoreIndex].HasReplayData and scores[scoreIndex]:HasReplayData() then WillowPlayReplay(scores[scoreIndex]) end
 	elseif activeTab == "Search" then
 		if index == 1 then easyInputStringOKCancel("Search:", 255, false, function(query) if wheel then wheel:SongSearch(query or "") end end, function() end)
 		elseif index == 2 and wheel then wheel:SongSearch("") end

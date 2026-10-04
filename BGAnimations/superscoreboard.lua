@@ -589,7 +589,7 @@ local function makeScoreDisplay(i)
 						hs,
 						function()
 							if hs:GetReplay():HasReplayData() then
-								SCREENMAN:GetTopScreen():PlayReplay(hs)
+								WillowPlayReplay(hs)
 							else
 								ms.ok(translated_info["NoReplay"])
 							end

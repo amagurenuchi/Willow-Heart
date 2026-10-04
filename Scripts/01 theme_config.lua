@@ -2,6 +2,8 @@ local defaultConfig = {
     global = {
         PlayBGM = true,
         Judgements = "Minimal",
+        SkipStageInformation = false,
+        DirectNumberInput = false,
     },
 }
 

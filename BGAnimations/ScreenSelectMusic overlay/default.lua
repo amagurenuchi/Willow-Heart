@@ -76,7 +76,7 @@ local t = Def.ActorFrame{
 				wheel:Move(0)
 				return true
 			end
-			if event.type == "InputEventType_FirstPress" and deviceButton == "DeviceButton_space" then
+			if event.type == "InputEventType_FirstPress" and deviceButton == "DeviceButton_space" and getTabIndex() ~= 3 then
 				local song = GAMESTATE:GetCurrentSong()
 				if song and GAMESTATE:GetCurrentSteps(PLAYER_1) then
 					SCREENMAN:AddNewScreenToTop("ScreenChartPreview")

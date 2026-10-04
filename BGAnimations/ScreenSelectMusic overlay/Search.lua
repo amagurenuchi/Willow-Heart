@@ -9,6 +9,7 @@ local lastsearchstring = ""
 local config = themeConfig and themeConfig:get_data() or {global={}}
 local instantSearch = config.global.InstantSearch or false
 local IgnoreTabInput = config.global.IgnoreTabInput or 1
+local directNumberInput = config.global.DirectNumberInput == true
 
 local function searchInput(event)
 	if event.type ~= "InputEventType_Release" and active == true then
@@ -39,7 +40,7 @@ local function searchInput(event)
 				searchstring = searchstring .. Arch.getClipboard()
 			elseif
 				event.char and event.char:match('[%%%+%-%!%@%#%$%^%&%*%(%)%=%_%.%,%:%;%\'%"%>%<%?%/%~%|%w%[%]%{%}%`%\\]') and
-					(not tonumber(event.char) or CtrlPressed or IgnoreTabInput > 1)
+					(not tonumber(event.char) or CtrlPressed or directNumberInput or IgnoreTabInput > 1)
 			 then
 				searchstring = searchstring .. event.char
 			end
@@ -51,7 +52,10 @@ local function searchInput(event)
 			end
 			lastsearchstring = searchstring
 		end
+		-- Keep search keystrokes from reaching preview/gameplay handlers.
+		return true
 	end
+	return false
 end
 
 local translated_info = {

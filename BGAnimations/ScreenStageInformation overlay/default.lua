@@ -27,6 +27,15 @@ local artist = song and song:GetDisplayArtist() or ""
 
 local t = Def.ActorFrame{
 	OnCommand = function(self)
+		if themeConfig:get_data().global.SkipStageInformation then
+			self:visible(false)
+			local screen = SCREENMAN:GetTopScreen()
+			if screen then
+				screen:SetNextScreenName("ScreenGameplay")
+				screen:StartTransitioningScreen("SM_GoToNextScreen")
+			end
+			return
+		end
 		_G.willowHeartStageInformationShown = true
 		-- ScreenStageInformation is a theme-defined screen, so advance it
 		-- explicitly instead of depending on menu-screen timer behavior.

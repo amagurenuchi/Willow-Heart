@@ -30,8 +30,23 @@ local t = Def.ActorFrame{
 	end,
 	UpdateCommand = function(self, params)
 		SetValues(params)
-		Values.Song = (params and params.Song) or GAMESTATE:GetCurrentSong()
-		Values.Steps = (params and params.Steps) or GAMESTATE:GetCurrentSteps(PLAYER)
+		-- Event payloads are authoritative.  In particular, Song = nil means
+		-- the wheel is on a group/empty entry and must clear the old song;
+		-- falling back to GAMESTATE here leaks the previous song's BPM.
+		if params and params.Song ~= nil then
+			Values.Song = params.Song
+		elseif params and params.Group ~= nil then
+			Values.Song = nil
+		else
+			Values.Song = GAMESTATE:GetCurrentSong()
+		end
+		if params and params.Steps ~= nil then
+			Values.Steps = params.Steps
+		elseif params and params.Group ~= nil then
+			Values.Steps = nil
+		else
+			Values.Steps = GAMESTATE:GetCurrentSteps(PLAYER)
+		end
 		if GAMESTATE:GetSongOptionsObject('ModsLevel_Current') then
 			Values.Rate = GAMESTATE:GetSongOptionsObject('ModsLevel_Current'):MusicRate()
 		else
@@ -161,8 +176,8 @@ t[#t+1] = LoadFont("Common Normal") .. {
 		self:diffuse(COLOR.MainBorder)
 	end,	
 	UpdateCommand = function(self)
-		local song = Values.Song or GAMESTATE:GetCurrentSong()
-		local steps = Values.Steps or GAMESTATE:GetCurrentSteps(PLAYER)
+		local song = Values.Song
+		local steps = Values.Steps
 		local rate = Values.Rate or (GAMESTATE:GetSongOptionsObject('ModsLevel_Current') and GAMESTATE:GetSongOptionsObject('ModsLevel_Current'):MusicRate() or 1)
 
 		if song then

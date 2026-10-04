@@ -82,6 +82,7 @@ local defaultConfig = {
 	ErrorBar = 1,
 	leaderboardEnabled = false,
 	PlayerInfo = true,
+	ArtistTitle = true,
 	FullProgressBar = true,
 	MiniProgressBar = true,
 	LaneCover = 0, -- soon to be changed to: 0=off, 1=sudden, 2=hidden

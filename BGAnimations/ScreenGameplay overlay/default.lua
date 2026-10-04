@@ -249,18 +249,20 @@ local classicCombo = Def.ActorFrame{
 
 local function updateAverage(self)
 	local s = stats()
-	if not s then self:settext("0.00%") return end
+	if not s then self:settext("") return end
 	if s.GetCurWifeScore and s.GetMaxWifeScore then
 		local max = tonumber(s:GetMaxWifeScore()) or 0
-		if max > 0 then self:settextf("%.2f%%", (s:GetCurWifeScore() / max) * 100) else self:settext("0.00%") end
+		if max <= 0 then self:settext("") return end
+		self:settextf("%.4f%%", (s:GetCurWifeScore() / max) * 100)
+		if s.GetWifeGrade then self:diffuse(getGradeColor(s:GetWifeGrade())) end
 	else
-		self:settext("0.00%")
+		self:settext("")
 	end
 end
 
 local function updateAccumulated(self)
 	local s = stats()
-	if not s or not s.GetWifeScore then self:settext("0.00%") return end
+	if not s or not s.GetWifeScore then self:settext("") return end
 	self:settextf("%.2f%%", s:GetWifeScore() * 100)
 end
 
@@ -278,7 +280,7 @@ local wife = Def.ActorFrame{
 	LoadFont("hatsukoifriendsmini 24px") .. {
 		Name = "Average",
 		InitCommand = function(self)
-			self:xy(SCREEN_CENTER_X, SCREEN_CENTER_Y):halign(0.5):valign(0.5):diffuse(color("#FFFFFF")):settext("0.00%")
+			self:xy(SCREEN_CENTER_X, SCREEN_CENTER_Y):halign(0.5):valign(0.5):diffuse(color("#FFFFFF")):settext("")
 		end,
 		UpdateCommand = function(self)
 			updateAverage(self)
@@ -287,8 +289,8 @@ local wife = Def.ActorFrame{
 	LoadFont("hatsukoifriendsmini 24px") .. {
 		Name = "Accumulated",
 		InitCommand = function(self)
-			self:xy(24, SCREEN_HEIGHT - 24):halign(0):valign(1):zoom(1.5):diffuse(color("#FFFFFF")):settext("0.00%")
-		end,
+			self:visible(false):settext("")
+			end,
 		UpdateCommand = function(self)
 			updateAccumulated(self)
 		end,
@@ -296,8 +298,8 @@ local wife = Def.ActorFrame{
 }
 
 wife.BeginCommand = function(self)
-	self:GetChild("Average"):settext("0.00%")
-	self:GetChild("Accumulated"):settext("0.00%")
+	self:GetChild("Average"):playcommand("Update")
+	self:GetChild("Accumulated"):playcommand("Update")
 end
 
 return Def.ActorFrame{
@@ -308,6 +310,12 @@ return Def.ActorFrame{
 		hideFallbackLifeBar()
 		if _G.willowHeartStageInformationShown then
 			_G.willowHeartStageInformationShown = false
+			return
+		end
+		-- When stage information is disabled, gameplay is entered directly
+		-- from player options. Do not redirect that path back to the stage
+		-- information screen.
+		if themeConfig:get_data().global.SkipStageInformation then
 			return
 		end
 		local screen = SCREENMAN:GetTopScreen()
@@ -322,6 +330,7 @@ return Def.ActorFrame{
 	classicJudgment,
 	classicCombo,
 	wife,
+	LoadActor("PlayerInfo.lua"),
 	LoadActor("judgecounter.lua"),
 	LoadActor("errorbar.lua"),
 	LoadActor("custom_lifebar.lua"),

@@ -19,6 +19,7 @@ local leaderboard = {}
 local statRefreshActor = nil
 local customTimingWindows = false
 local plotLargestHit = false
+local plotActorCapacity = 2000
 
 -- Evaluation can load without the normal theme script bootstrap.
 if not GetGradeForPercent then
@@ -846,7 +847,6 @@ side.RefreshEvaluationCommand=function(self)
 	}
 	local plotDots = {}
 	for i,value in ipairs(offsets) do
-		if #plotDots >= 999999 then break end
 		if noteRows[i] and (selectedColumn == 0 or tracks[i] == selectedColumn-1) then
 			local x = (noteRows[i]-firstRow) / rowSpan * plotW - plotW/2
 			local absValue = math.abs(value)
@@ -860,7 +860,19 @@ side.RefreshEvaluationCommand=function(self)
 			plotDots[#plotDots+1] = {x, -value / plotRange * plotH/2, judgeColors[judgeIndex], i}
 		end
 	end
-	for i=1,2000 do
+	-- Replay vectors can be longer than the initial actor pool. Grow it when
+	-- needed so later points are not silently omitted from the plot.
+	local plotCapacity = math.max(2000, #plotDots)
+	for i=plotActorCapacity + 1,plotCapacity do
+		self:AddChild(Def.Quad{ Name="MissLine"..i, InitCommand=function(actor)
+			actor:zoomto(1,plotH):diffuse(judgementColor("TapNoteScore_Miss")):diffusealpha(0.65):visible(false)
+		end })
+		self:AddChild(Def.Quad{ Name="PlotDot"..i, InitCommand=function(actor)
+			actor:zoomto(2,2):visible(false)
+		end })
+	end
+	plotActorCapacity = math.max(plotActorCapacity, plotCapacity)
+	for i=1,plotCapacity do
 		local dot = self:GetChild("PlotDot"..i)
 		local missLine = self:GetChild("MissLine"..i)
 		local item = plotDots[i]
@@ -962,7 +974,10 @@ local function navButton(x,label,highlighted,action)
 	button[#button+1]=Def.Quad{InitCommand=function(self) self:zoomto(buttonW,buttonH):diffuse(highlighted and COLOR.MainHighlight or COLOR.MainBackground):diffusealpha(highlighted and 0.9 or 0.85) end}
 	button[#button+1]=UIElements.Border(buttonW,buttonH,1)..{InitCommand=function(self) self:diffuse(COLOR.MainBorder):diffusealpha(0.6) end}
 	button[#button+1]=LoadFont("Common Normal")..{InitCommand=function(self) self:zoom(0.50):diffuse(highlighted and COLOR.TextMainLight or COLOR.TextMain):settext(label) end}
-	button[#button+1]=UIElements.QuadButton(1)..{InitCommand=function(self) self:zoomto(buttonW,buttonH):diffusealpha(0);MouseClickCommand=action end}
+	button[#button+1]=UIElements.QuadButton(1)..{
+		InitCommand=function(self) self:zoomto(buttonW,buttonH):diffusealpha(0) end,
+		MouseClickCommand=action,
+	}
 	return button
 end
 

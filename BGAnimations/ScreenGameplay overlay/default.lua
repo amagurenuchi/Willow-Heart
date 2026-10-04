@@ -40,6 +40,16 @@ local function isFCOrHigher()
 		and (tonumber(s:GetTapNoteScores("TapNoteScore_Miss")) or 0) == 0
 end
 
+local function currentClearType()
+	local s = stats()
+	if not s or not s.GetTapNoteScores then return "ClearType_FC" end
+	local function count(name) return tonumber(s:GetTapNoteScores(name)) or 0 end
+	local w1, w2, w3 = count("TapNoteScore_W1"), count("TapNoteScore_W2"), count("TapNoteScore_W3")
+	if w2 == 0 and w3 == 0 then return "ClearType_MFC" end
+	if w3 == 0 then return w2 == 1 and "ClearType_WF" or (w2 < 10 and "ClearType_SDP" or "ClearType_PFC") end
+	return w3 == 1 and "ClearType_BF" or (w3 < 10 and "ClearType_SDG" or "ClearType_FC")
+end
+
 local function hideFallbackJudgment()
 	local screen = SCREENMAN:GetTopScreen()
 	local playerActor = screen and screen:GetChild("PlayerP1")
@@ -112,7 +122,7 @@ local comboProgress = Def.Quad {
 	Name = "ComboProgress",
 	InitCommand = function(self)
 		self:xy(SCREEN_CENTER_X - 10, SCREEN_CENTER_Y - 106)
-			:halign(0.5):valign(0.5):zoomto(100, 2):visible(false):diffuse(color("#66CC66"))
+			:halign(0.5):valign(0.5):zoomto(100, 2):visible(false):diffuse(getClearTypeColor("ClearType_FC"))
 	end,
 	JudgmentMessageCommand = function(self, params)
 		if displayMode ~= "Minimal" or not params or params.Player ~= player then return end
@@ -123,7 +133,8 @@ local comboProgress = Def.Quad {
 		end
 		local maximum = maxCombo()
 		local stillFC = tapScore ~= "TapNoteScore_W4" and tapScore ~= "TapNoteScore_W5" and tapScore ~= "TapNoteScore_Miss"
-		self:visible(stillFC and isFCOrHigher() and maximum > 0 and value > maximum * 0.25)
+		self:diffuse(getClearTypeColor(currentClearType()))
+			:visible(stillFC and isFCOrHigher() and maximum > 0 and value > maximum * 0.25)
 	end,
 }
 

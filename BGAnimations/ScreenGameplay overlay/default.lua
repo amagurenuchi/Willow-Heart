@@ -121,7 +121,7 @@ local combo = LoadFont("multicolore  64px") .. {
 local comboProgress = Def.Quad {
 	Name = "ComboProgress",
 	InitCommand = function(self)
-		self:xy(SCREEN_CENTER_X - 10, SCREEN_CENTER_Y - 106)
+		self:xy(SCREEN_CENTER_X, SCREEN_CENTER_Y - 106)
 			:halign(0.5):valign(0.5):zoomto(100, 2):visible(false):diffuse(getClearTypeColor("ClearType_FC"))
 	end,
 	JudgmentMessageCommand = function(self, params)
